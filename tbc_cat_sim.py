@@ -914,6 +914,20 @@ class Simulation():
                 self.swing_timer
             ))
 
+    def drop_tigers_fury(self, time):
+        """Remove Tiger's Fury buff and document if requested.
+
+        Arguments:
+            time (float): Simulation time when Tiger's Fury fell off, in
+                seconds. Required only if log_event is True.
+        """
+        self.player.calc_damage_params(tigers_fury=False, **self.params)
+
+        if self.log:
+            self.combat_log.append(
+                self.gen_log(time, "Tiger's Fury", 'falls off')
+            )
+
     def run(self, log=False):
         """Run a simulated trajectory for the fight.
 
@@ -939,9 +953,11 @@ class Simulation():
         self.rip_debuff = False
 
         # Configure combat logging if requested
-        if log:
+        self.log = log
+
+        if self.log:
             self.player.log = True
-            combat_log = []
+            self.combat_log = []
         else:
             self.player.log = False
 
@@ -1031,22 +1047,15 @@ class Simulation():
             if self.player.innervated and (time >= self.player.innervate_end):
                 self.player.innervated = False
 
-                if log:
-                    combat_log.append(self.gen_log(
+                if self.log:
+                    self.combat_log.append(self.gen_log(
                         self.player.innervate_end, 'Innervate', 'falls off'
                     ))
 
             # Check if Tiger's Fury fell off
             if tf_active and (time >= tf_end):
-                self.player.calc_damage_params(
-                    tigers_fury=False, **self.params
-                )
+                self.drop_tigers_fury(tf_end)
                 tf_active = False
-
-                if log:
-                    combat_log.append(self.gen_log(
-                        tf_end, "Tiger's Fury", 'falls off'
-                    ))
 
             # Check if haste buff is expired or if a new one can be popped
             if self.mcp_equipped and mcp_active and (time >= mcp_end):
@@ -1057,8 +1066,8 @@ class Simulation():
                 )
                 self.update_swing_times(self.swing_times[0])
 
-                if log:
-                    combat_log.append(self.gen_log(
+                if self.log:
+                    self.combat_log.append(self.gen_log(
                         mcp_end, 'Haste', 'falls off'
                     ))
             elif self.mcp_equipped and (not mcp_active) and (self.mcp_cd == 0):
@@ -1069,15 +1078,17 @@ class Simulation():
                 self.update_swing_times(self.swing_times[0])
                 mcp_end = time + 90.0
 
-                if log:
-                    combat_log.append(self.gen_log(time, 'Haste', 'applied'))
+                if self.log:
+                    self.combat_log.append(
+                        self.gen_log(time, 'Haste', 'applied')
+                    )
 
             # Check if Mangle fell off
             if self.mangle_debuff and (time >= self.mangle_end):
                 self.mangle_debuff = False
 
-                if log:
-                    combat_log.append(
+                if self.log:
+                    self.combat_log.append(
                         self.gen_log(self.mangle_end, 'Mangle', 'falls off')
                     )
 
@@ -1088,8 +1099,8 @@ class Simulation():
                 rip_damage += tick_damage
                 self.rip_ticks.pop(0)
 
-                if log:
-                    combat_log.append(
+                if self.log:
+                    self.combat_log.append(
                         self.gen_log(time, 'Rip tick', '%d' % tick_damage)
                     )
 
@@ -1097,8 +1108,8 @@ class Simulation():
             if self.rip_debuff and (time > self.rip_end - 1e-9):
                 self.rip_debuff = False
 
-                if log:
-                    combat_log.append(
+                if self.log:
+                    self.combat_log.append(
                         self.gen_log(self.rip_end, 'Rip', 'falls off')
                     )
 
@@ -1107,8 +1118,10 @@ class Simulation():
                 dmg_done += self.player.swing()
                 self.swing_times.pop(0)
 
-                if log:
-                    combat_log.append(['%.3f' % time] + self.player.combat_log)
+                if self.log:
+                    self.combat_log.append(
+                        ['%.3f' % time] + self.player.combat_log
+                    )
 
             # Check if an energy/spirit tick happens at this time
             if time == energy_tick_times[0]:
@@ -1118,23 +1131,27 @@ class Simulation():
                 self.player.regen_mana()
                 energy_tick_times.pop(0)
 
-                if log:
-                    combat_log.append(self.gen_log(time, 'energy tick', ''))
+                if self.log:
+                    self.combat_log.append(
+                        self.gen_log(time, 'energy tick', '')
+                    )
 
             # Check if a Fel Mana Potion tick happens at this time
             if self.player.pot_active and (time == self.player.pot_ticks[0]):
                 self.player.regen_mana(pot=True)
                 self.player.pot_ticks.pop(0)
 
-                if log:
-                    combat_log.append(self.gen_log(time, 'Fel Mana tick', ''))
+                if self.log:
+                    self.combat_log.append(
+                        self.gen_log(time, 'Fel Mana tick', '')
+                    )
 
             # Check if Fel Mana Potion expired
             if self.player.pot_active and (time > self.player.pot_end - 1e-9):
                 self.player.pot_active = False
 
-                if log:
-                    combat_log.append(self.gen_log(
+                if self.log:
+                    self.combat_log.append(self.gen_log(
                         self.player.pot_end, 'Fel Mana', 'falls off'
                     ))
 
@@ -1153,8 +1170,15 @@ class Simulation():
             energy.append(self.player.energy)
             combos.append(self.player.combo_points)
 
-            if log and self.player.combat_log:
-                combat_log.append(['%.3f' % time] + self.player.combat_log)
+            if self.log and self.player.combat_log:
+                self.combat_log.append(
+                    ['%.3f' % time] + self.player.combat_log
+                )
+
+            # If we entered caster form, Tiger's Fury fell off
+            if tf_active and (self.player.gcd == 1.5):
+                self.drop_tigers_fury(time)
+                tf_active = False
 
             # Update time
             previous_time = time
@@ -1174,8 +1198,8 @@ class Simulation():
         self.player.dmg_breakdown['Rip']['damage'] = rip_damage
         output = (times, damage, energy, combos, self.player.dmg_breakdown)
 
-        if log:
-            output += (combat_log,)
+        if self.log:
+            output += (self.combat_log,)
 
         return output
 
