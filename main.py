@@ -893,7 +893,7 @@ def create_buffed_player(
     ap_mod = 1.1 * (1 + 0.1 * ('unleashed_rage' in other_buffs))
     buffed_attack_power = ap_mod * (
         raw_ap_unbuffed + 2 * buffed_strength + buffed_agi
-        + 222 * ('might' in raid_buffs) + 290 * ('bshout' in raid_buffs)
+        + 222 * ('might' in raid_buffs) + 382 * ('bshout' in raid_buffs)
         + 100 * ('trueshot_aura' in raid_buffs)
         + 100 * ('consec' in consumables)
         + 110 * ('hunters_mark' in stat_debuffs)
