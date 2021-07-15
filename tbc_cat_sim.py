@@ -113,10 +113,10 @@ class Player():
 
     def __init__(
             self, attack_power, hit_chance, crit_chance, armor_pen,
-            swing_timer, mana, intellect, spirit, mp5, jow=False,
-            t4_bonus=False, bonus_damage=0, multiplier=1.1, omen=True,
-            feral_aggression=0, savage_fury=2, natural_shapeshifter=3,
-            intensity=3, weapon_speed=3.0, log=False
+            swing_timer, mana, intellect, spirit, mp5, jow=False, pot=True,
+            cheap_pot=False, rune=True, t4_bonus=False, bonus_damage=0,
+            multiplier=1.1, omen=True, feral_aggression=0, savage_fury=2,
+            natural_shapeshifter=3, intensity=3, weapon_speed=3.0, log=False
     ):
         """Initialize player with key damage parameters.
 
@@ -136,6 +136,10 @@ class Player():
             mp5 (int): Bonus mp5 from gear or buffs.
             jow (bool): Whether the player is receiving Judgment of Wisdom
                 procs. Defaults False.
+            pot (bool): Whether mana potions are used. Defaults True.
+            cheap_pot (bool): Whether the budget Super Mana Potion is used
+                instead of the optimal Fel Mana Potion. Defaults False.
+            rune (bool): Whether Dark/Demonic Runes are used. Defaults True.
             t4_bonus (bool): Whether the 2-piece T4 set bonus is used. Defaults
                 False.
             bonus_damage (int): Bonus weapon damage from buffs such as Bogling
@@ -166,6 +170,9 @@ class Player():
         self.spirit = spirit
         self.mp5 = mp5
         self.jow = jow
+        self.pot = pot
+        self.cheap_pot = cheap_pot
+        self.rune = rune
         self.t4_bonus = t4_bonus
         self.bonus_damage = bonus_damage
         self.damage_multiplier = multiplier
@@ -208,6 +215,11 @@ class Player():
         # pot duration, factoring in other regen sources and mana spent on
         # shifting. This provides buffer against rng with respect to JoW procs
         # or the number of shift cycles completed in that time.
+
+        if self.cheap_pot:
+            self.pot_threshold = self.mana_pool - 3000
+            return
+
         self.pot_threshold = self.mana_pool - 36 * (
             400./3 + self.regen_rates['five_second_rule'] / 2
             + 37. * (1./self.swing_timer + 2./5) - self.shift_cost/5
@@ -375,21 +387,44 @@ class Player():
         self.mana = min(self.mana + regen, self.mana_pool)
 
     def use_rune(self):
-        """Pop a Dark/Demonic Rune to restore mana."""
+        """Pop a Dark/Demonic Rune to restore mana when appropriate.
+
+        Returns:
+            rune_used (bool): Whether the rune was used.
+        """
+        if ((not self.rune) or (self.rune_cd > 1e-9)
+                or (self.mana > self.mana_pool - 1500)):
+            return False
+
         self.mana += (900 + np.random.rand() * 600)
         self.rune_cd = 120.0
+        return True
 
     def use_pot(self, time):
-        """Pop a Fel Mana Potion to restore mana over time.
+        """Pop a Mana Potion to restore mana when appropriate.
 
         Arguments:
             time (float): Time at which the potion is consumed. Used to
-                generate a list of tick times for the regen.
+                generate a list of tick times for Fel Mana regen.
+
+        Returns:
+            pot_used (bool): Wheter the potion was used.
         """
-        self.pot_active = True
+        if ((not self.pot) or (self.pot_cd > 1e-9)
+                or (self.mana > self.pot_threshold)):
+            return False
+
         self.pot_cd = 120.0
-        self.pot_ticks = list(np.arange(time + 3, time + 24.01, 3))
-        self.pot_end = time + 24
+
+        # If we're using cheap potions, we ignore the Fel Mana tick logic
+        if self.cheap_pot:
+            self.mana += (1800 + np.random.rand() * 1200)
+        else:
+            self.pot_active = True
+            self.pot_ticks = list(np.arange(time + 3, time + 24.01, 3))
+            self.pot_end = time + 24
+
+        return True
 
     def swing(self):
         """Execute a melee swing.
@@ -643,14 +678,12 @@ class Player():
         mana_str = ''
 
         # Pop a Dark Rune if we can get full value from it
-        if (self.rune_cd < 1e-9) and (self.mana <= self.mana_pool - 1500):
-            self.use_rune()
+        if self.use_rune():
             mana_str = 'use Dark Rune'
 
-        # Pop a Mana Potion if we can get full value from it plus some buffer
-        if (self.pot_cd < 1e-9) and (self.mana <= self.pot_threshold):
-            self.use_pot(time)
-            mana_str = 'use Fel Mana Potion'
+        # Pop a Mana Potion if we can get full value from it
+        if self.use_pot(time):
+            mana_str = 'use Mana Potion'
 
         if self.log:
             self.combat_log = [
@@ -701,6 +734,7 @@ class Simulation():
         'prepop_TF': False,
         'prepop_numticks': 2,
         'min_combos_for_rip': 4,
+        'use_innervate': True
     }
 
     def __init__(self, player, fight_length, num_mcp=0, **kwargs):
@@ -787,7 +821,8 @@ class Simulation():
         """
         # Only Innervate if (a) we don't have enough mana for two shifts, (b)
         # the fight isn't ending, and (c) Innervate is not on cooldown.
-        if ((self.player.mana <= self.innervate_threshold)
+        if (self.strategy['use_innervate']
+                and (self.player.mana <= self.innervate_threshold)
                 and (time < self.fight_length - 1.6)
                 and (self.player.innervate_cd < 1e-9)):
             # First execute the Innervate cast. Player object will track the

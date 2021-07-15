@@ -264,6 +264,28 @@ buffs_1 = dbc.Col(
                   {'label': 'Adamantite Weightstone', 'value': 'weightstone'}],
          value=['agi_elixir', 'food', 'weightstone'], id='consumables'
      ),
+     dbc.Row(
+         [dbc.Col(dbc.Checklist(
+             options=[{'label': 'Mana Potion: ', 'value': 'pot'},
+                      {'label': 'Dark / Demonic Rune', 'value': 'rune'}],
+             value=['pot', 'rune'], id='mana_consumes',
+          ), width='auto'),
+          dbc.Col(
+                dbc.FormGroup(
+                    [
+                        dbc.Checkbox(
+                            id='cheap_pots', className='form-check-input'
+                        ),
+                        dbc.Label(
+                            'use cheap pots', html_for='cheap_pots',
+                            className='form-check-label'
+                        )
+                    ],
+                    check=True
+                ),
+                width='auto'
+          )],
+     ),
      html.Br(),
      html.H5('Raid Buffs'),
      dbc.Checklist(
@@ -525,6 +547,10 @@ iteration_input = dbc.Col([
     dbc.Checklist(
         options=[{'label': ' no-Rip rotation', 'value': 'no_rip'}], value=[],
         id='no_rip'
+    ),
+    dbc.Checklist(
+        options=[{'label': ' use Innervate', 'value': 'use_innervate'}],
+        value=['use_innervate'], id='use_innervate'
     ),
     html.Div([
         dbc.Button(
@@ -853,7 +879,7 @@ def create_buffed_player(
         expertise_rating, armor_pen, weapon_speed, unbuffed_mana, unbuffed_mp5,
         consumables, raid_buffs, num_mcp, other_buffs, stat_debuffs, surv_agi,
         feral_aggression, savage_fury, naturalist, natural_shapeshifter,
-        ferocious_inspiration, intensity
+        ferocious_inspiration, intensity, mana_consumes, cheap_pots
 ):
     """Compute fully raid buffed stats based on specified raid buffs, and
     instantiate a Player object with those stats."""
@@ -934,7 +960,8 @@ def create_buffed_player(
         intensity=int(intensity), weapon_speed=weapon_speed,
         bonus_damage=bonus_weapon_damage, multiplier=damage_multiplier,
         jow='jow' in stat_debuffs, armor_pen=armor_pen,
-        t4_bonus='t4_bonus' in other_buffs
+        t4_bonus='t4_bonus' in other_buffs, rune='rune' in mana_consumes,
+        pot='pot' in mana_consumes, cheap_pot=cheap_pots
     )
 
 
@@ -1131,6 +1158,8 @@ def plot_new_trajectory(sim, show_whites):
     Input('run_button', 'n_clicks'),
     Input('weight_button', 'n_clicks'),
     Input('graph_button', 'n_clicks'),
+    State('mana_consumes', 'value'),
+    State('cheap_pots', 'checked'),
     State('ferocious_inspiration', 'value'),
     State('feral_aggression', 'value'),
     State('savage_fury', 'value'),
@@ -1144,6 +1173,7 @@ def plot_new_trajectory(sim, show_whites):
     State('prepop_numticks', 'value'),
     State('allow_early_rip', 'value'),
     State('no_rip', 'value'),
+    State('use_innervate', 'value'),
     State('num_replicates', 'value'),
     State('calc_mana_weights', 'checked'),
     State('show_whites', 'checked'))
@@ -1152,11 +1182,11 @@ def compute(
         unbuffed_ap, unbuffed_crit, unbuffed_hit, haste_rating, armor_pen,
         expertise_rating, weapon_speed, unbuffed_mana, unbuffed_mp5,
         consumables, raid_buffs, num_mcp, other_buffs, stat_debuffs, surv_agi,
-        run_clicks, weight_clicks, graph_clicks, ferocious_inspiration,
-        feral_aggression, savage_fury, naturalist, natural_shapeshifter,
-        intensity, fight_length, boss_armor, boss_debuffs, prepop_TF,
-        prepop_numticks, allow_early_rip, no_rip, num_replicates,
-        calc_mana_weights, show_whites
+        run_clicks, weight_clicks, graph_clicks, mana_consumes, cheap_pots,
+        ferocious_inspiration, feral_aggression, savage_fury, naturalist,
+        natural_shapeshifter, intensity, fight_length, boss_armor,
+        boss_debuffs, prepop_TF, prepop_numticks, allow_early_rip, no_rip,
+        use_innervate, num_replicates, calc_mana_weights, show_whites
 ):
     ctx = dash.callback_context
 
@@ -1167,7 +1197,7 @@ def compute(
         expertise_rating, armor_pen, weapon_speed, unbuffed_mana, unbuffed_mp5,
         consumables, raid_buffs, num_mcp, other_buffs, stat_debuffs, surv_agi,
         feral_aggression, savage_fury, naturalist, natural_shapeshifter,
-        ferocious_inspiration, intensity
+        ferocious_inspiration, intensity, mana_consumes, cheap_pots
     )
 
     # Default output is just the buffed player stats with no further calcs
@@ -1191,7 +1221,8 @@ def compute(
     sim = ccs.Simulation(
         player, fight_length + 1e-9, num_mcp=max_mcp,
         boss_armor=boss_armor, prepop_TF=bool(prepop_TF),
-        prepop_numticks=int(prepop_numticks), min_combos_for_rip=rip_cp
+        prepop_numticks=int(prepop_numticks), min_combos_for_rip=rip_cp,
+        use_innervate=bool(use_innervate)
     )
     sim.set_active_debuffs(boss_debuffs)
 
