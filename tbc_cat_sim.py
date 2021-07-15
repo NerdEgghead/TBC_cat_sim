@@ -1410,11 +1410,17 @@ class Simulation():
             num_replicates, 'armor_pen', 300, base_dps
         )
 
+        # For weapon damage, we use an increment of 12
+        dps_deltas['1 Weapon Damage'] = 1./12. * self.calc_deriv(
+            num_replicates, 'bonus_damage', 12, base_dps
+        )
+
         # Calculate normalized stat weights
         stat_weights = {}
 
-        for stat in ['1% hit', '1% crit', '1% haste', '1 Armor Pen']:
-            stat_weights[stat] = dps_deltas[stat] / dps_deltas['1 AP']
+        for stat in dps_deltas:
+            if stat != '1 AP':
+                stat_weights[stat] = dps_deltas[stat] / dps_deltas['1 AP']
 
         return dps_deltas, stat_weights
 

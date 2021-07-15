@@ -102,6 +102,22 @@ stat_input = dbc.Col([
     ]),
     html.Div([
         html.Div(
+            'Added Weapon Damage',
+            style={
+                'width': '40%', 'display': 'inline-block',
+                'fontWeight': 'bold'
+            }
+        ),
+        dbc.Input(
+            type='number', value=9, id='weapon_damage',
+            style={
+                'width': '30%', 'display': 'inline-block',
+                'marginBottom': '2.5%'
+            }
+        )
+    ]),
+    html.Div([
+        html.Div(
             'Crit Chance:',
             style={
                 'width': '40%', 'display': 'inline-block',
@@ -884,10 +900,11 @@ app.layout = html.Div([
 def create_buffed_player(
         unbuffed_strength, unbuffed_agi, unbuffed_int, unbuffed_spirit,
         unbuffed_ap, unbuffed_crit, unbuffed_hit, haste_rating,
-        expertise_rating, armor_pen, weapon_speed, unbuffed_mana, unbuffed_mp5,
-        consumables, raid_buffs, num_mcp, other_buffs, stat_debuffs, surv_agi,
-        feral_aggression, savage_fury, naturalist, natural_shapeshifter,
-        ferocious_inspiration, intensity, mana_consumes, cheap_pots, bonuses
+        expertise_rating, armor_pen, weapon_damage, weapon_speed,
+        unbuffed_mana, unbuffed_mp5, consumables, raid_buffs, num_mcp,
+        other_buffs, stat_debuffs, surv_agi, feral_aggression, savage_fury,
+        naturalist, natural_shapeshifter, ferocious_inspiration, intensity,
+        mana_consumes, cheap_pots, bonuses
 ):
     """Compute fully raid buffed stats based on specified raid buffs, and
     instantiate a Player object with those stats."""
@@ -951,6 +968,7 @@ def create_buffed_player(
     # Calculate bonus damage parameters
     bonus_weapon_damage = (
         12 * ('weightstone' in consumables) + ('bogling_root' in other_buffs)
+        + weapon_damage
     )
     damage_multiplier = (
         (1 + 0.02 * int(naturalist)) * 1.03**ferocious_inspiration
@@ -1168,6 +1186,7 @@ def plot_new_trajectory(sim, show_whites):
     Input('run_button', 'n_clicks'),
     Input('weight_button', 'n_clicks'),
     Input('graph_button', 'n_clicks'),
+    State('weapon_damage', 'value'),
     State('mana_consumes', 'value'),
     State('cheap_pots', 'checked'),
     State('ferocious_inspiration', 'value'),
@@ -1193,11 +1212,11 @@ def compute(
         unbuffed_ap, unbuffed_crit, unbuffed_hit, haste_rating, armor_pen,
         expertise_rating, weapon_speed, unbuffed_mana, unbuffed_mp5,
         consumables, raid_buffs, num_mcp, other_buffs, stat_debuffs, surv_agi,
-        run_clicks, weight_clicks, graph_clicks, mana_consumes, cheap_pots,
-        ferocious_inspiration, bonuses, feral_aggression, savage_fury,
-        naturalist, natural_shapeshifter, intensity, fight_length, boss_armor,
-        boss_debuffs, prepop_TF, prepop_numticks, allow_early_rip, no_rip,
-        use_innervate, num_replicates, calc_mana_weights, show_whites
+        run_clicks, weight_clicks, graph_clicks, weapon_damage, mana_consumes,
+        cheap_pots, ferocious_inspiration, bonuses, feral_aggression,
+        savage_fury, naturalist, natural_shapeshifter, intensity, fight_length,
+        boss_armor, boss_debuffs, prepop_TF, prepop_numticks, allow_early_rip,
+        no_rip, use_innervate, num_replicates, calc_mana_weights, show_whites
 ):
     ctx = dash.callback_context
 
@@ -1205,10 +1224,11 @@ def compute(
     player = create_buffed_player(
         unbuffed_strength, unbuffed_agi, unbuffed_int, unbuffed_spirit,
         unbuffed_ap, unbuffed_crit, unbuffed_hit, haste_rating,
-        expertise_rating, armor_pen, weapon_speed, unbuffed_mana, unbuffed_mp5,
-        consumables, raid_buffs, num_mcp, other_buffs, stat_debuffs, surv_agi,
-        feral_aggression, savage_fury, naturalist, natural_shapeshifter,
-        ferocious_inspiration, intensity, mana_consumes, cheap_pots, bonuses
+        expertise_rating, armor_pen, weapon_damage, weapon_speed,
+        unbuffed_mana, unbuffed_mp5, consumables, raid_buffs, num_mcp,
+        other_buffs, stat_debuffs, surv_agi, feral_aggression, savage_fury,
+        naturalist, natural_shapeshifter, ferocious_inspiration, intensity,
+        mana_consumes, cheap_pots, bonuses
     )
 
     # Default output is just the buffed player stats with no further calcs
