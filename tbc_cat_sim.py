@@ -260,8 +260,7 @@ class Player():
         """Calculate high and low end damage of all abilities as a function of
         specified boss debuffs."""
         bonus_damage = (
-            self.attack_power/14 + 8 * gift_of_arthas + self.bonus_damage
-            + 40 * tigers_fury
+            self.attack_power/14 + self.bonus_damage + 40 * tigers_fury
         )
         residual_armor = max(0, (
             boss_armor - max(sunder * 2600, imp_EA * 3075) - 800 * CoR
@@ -302,6 +301,20 @@ class Player():
             5: (1092 + 0.24*self.attack_power) / 6 * damage_multiplier,
             4: (894 + 0.24*self.attack_power) / 6 * damage_multiplier
         }
+
+        # Adjust damage values for Gift of Arthas
+        if not gift_of_arthas:
+            return
+
+        for bound in ['low', 'high']:
+            for ability in ['white', 'shred', 'claw', 'mangle']:
+                attr = '%s_%s' % (ability, bound)
+                setattr(self, attr, getattr(self, attr) + 8 * armor_multiplier)
+
+            bite_damage = getattr(self, 'bite_%s' % bound)
+
+            for cp in [4, 5]:
+                bite_damage[cp] += 8 * armor_multiplier
 
     def reset(self):
         """Reset fight-specific parameters to their starting values at the
