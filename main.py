@@ -28,7 +28,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=217, id='unbuffed_strength',
+            type='number', value=202, id='unbuffed_strength',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -44,7 +44,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=462, id='unbuffed_agi',
+            type='number', value=543, id='unbuffed_agi',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -60,7 +60,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=166, id='unbuffed_int',
+            type='number', value=192, id='unbuffed_int',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -76,7 +76,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            value=162, type='number', id='unbuffed_spirit',
+            value=161, type='number', id='unbuffed_spirit',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -93,7 +93,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=2497, id='unbuffed_attack_power',
+            type='number', value=2912, id='unbuffed_attack_power',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -125,7 +125,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=33.45, id='unbuffed_crit',
+            type='number', value=37.49, id='unbuffed_crit',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -149,7 +149,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=9.0, id='unbuffed_hit',
+            type='number', value=6.34, id='unbuffed_hit',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -205,7 +205,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=38, id='expertise_rating',
+            type='number', value=20, id='expertise_rating',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -221,7 +221,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            value=3.0, type='number', id='unbuffed_weapon_speed',
+            value=2.0, type='number', id='unbuffed_weapon_speed',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -245,7 +245,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            value=4574, type='number', id='unbuffed_mana',
+            value=4970, type='number', id='unbuffed_mana',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -278,7 +278,8 @@ buffs_1 = dbc.Col(
                   {'label': 'Scroll of Agility V', 'value': 'scroll'},
                   {'label': 'Consecrated Sharpening Stone', 'value': 'consec'},
                   {'label': 'Adamantite Weightstone', 'value': 'weightstone'}],
-         value=['agi_elixir', 'food', 'weightstone'], id='consumables'
+         value=['agi_elixir', 'food', 'scroll', 'weightstone'],
+         id='consumables'
      ),
      dbc.Row(
          [dbc.Col(dbc.Checklist(
@@ -318,7 +319,7 @@ buffs_1 = dbc.Col(
                   {'label': 'Blessing of Wisdom', 'value': 'wisdom'}],
          value=[
              'kings', 'might', 'motw', 'str_totem', 'agi_totem', 'ai',
-             'spirit', 'wisdom'
+             'spirit',
          ],
          id='raid_buffs'
      ),
@@ -331,7 +332,7 @@ buffs_1 = dbc.Col(
                       {'label': 'Omen of Clarity', 'value': 'omen'},
                       {'label': 'Bogling Root', 'value': 'bogling_root'},
                       {'label': 'Unleashed Rage', 'value': 'unleashed_rage'}],
-             value=['omen', 'unleashed_rage'], id='other_buffs',
+             value=['omen'], id='other_buffs',
           ), width='auto'),
           dbc.Col(dbc.Input(
               value=2, type='number', id='num_mcp',
@@ -377,7 +378,7 @@ encounter_details = dbc.Col(
      dbc.InputGroup(
          [
              dbc.InputGroupAddon('Boss Armor:', addon_type='prepend'),
-             dbc.Input(value=6200, type='number', id='boss_armor')
+             dbc.Input(value=7700, type='number', id='boss_armor')
          ],
          style={'width': '75%'}
      ),
