@@ -26,9 +26,10 @@ def calc_white_damage(low_end, high_end, miss_chance, crit_chance):
 
     base_dmg = low_end + np.random.rand() * (high_end - low_end)
 
-    if outcome_roll < miss_chance + 0.25:
-        return 0.65 * base_dmg, False, False
-    if outcome_roll < miss_chance + 0.25 + crit_chance:
+    if outcome_roll < miss_chance + 0.24:
+        glance_reduction = 0.15 + np.random.rand() * 0.2
+        return (1.0 - glance_reduction) * base_dmg, False, False
+    if outcome_roll < miss_chance + 0.24 + crit_chance:
         return 2.2 * base_dmg, False, True
     return base_dmg, False, False
 
@@ -281,12 +282,12 @@ class Player():
         )
         self.bite_multiplier = self.multiplier * (1+0.03*self.feral_aggression)
         self.bite_low = {
-            5: (935 + 0.15 * self.attack_power) * self.bite_multiplier,
-            4: (766 + 0.12 * self.attack_power) * self.bite_multiplier
+            5: (935 + 0.25 * self.attack_power) * self.bite_multiplier,
+            4: (766 + 0.2 * self.attack_power) * self.bite_multiplier
         }
         self.bite_high = {
-            5: (968 + 0.15 * self.attack_power) * self.bite_multiplier,
-            4: (799 + 0.12 * self.attack_power) * self.bite_multiplier
+            5: (968 + 0.25 * self.attack_power) * self.bite_multiplier,
+            4: (799 + 0.2 * self.attack_power) * self.bite_multiplier
         }
         mangle_fac = 1 + 0.1 * self.savage_fury
         self.claw_low = mangle_fac * (self.white_low + 190 * self.multiplier)

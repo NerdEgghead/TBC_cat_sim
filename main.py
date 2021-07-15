@@ -282,7 +282,7 @@ buffs_1 = dbc.Col(
      ),
      dbc.Row(
          [dbc.Col(dbc.Checklist(
-             options=[{'label': 'Mana Potion: ', 'value': 'pot'},
+             options=[{'label': 'Mana Potion', 'value': 'pot'},
                       {'label': 'Dark / Demonic Rune', 'value': 'rune'}],
              value=['pot', 'rune'], id='mana_consumes',
           ), width='auto'),
