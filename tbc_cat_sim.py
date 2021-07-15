@@ -756,6 +756,9 @@ class Simulation():
         'prepop_TF': False,
         'prepop_numticks': 2,
         'min_combos_for_rip': 4,
+        'use_mangle_trick': True,
+        'use_bite': False,
+        'bite_time': 4.0,
         'use_innervate': True
     }
 
@@ -923,6 +926,7 @@ class Simulation():
         mangle_next = (
             (not rip_next) and (mangle_now or (self.mangle_end <= next_tick))
         )
+        time_to_next_tick = next_tick - time
 
         if self.player.mana < self.player.shift_cost:
             # If this is the first time we're oom, log it
@@ -947,8 +951,15 @@ class Simulation():
             elif (energy >= 40) or self.player.omen_proc:
                 return self.mangle(time)
         elif energy >= 22:
+            if ((cp >= 4) and self.strategy['use_bite'] and (energy >= 35)
+                    and (self.rip_end - time >= self.strategy['bite_time'])
+                    and (not self.player.omen_proc)):
+                return self.player.bite()
             if (energy >= 42) or self.player.omen_proc:
                 return self.player.shred()
+            if ((energy >= 40) and (time_to_next_tick > 1.0)
+                    and self.strategy['use_mangle_trick']):
+                return self.mangle(time)
         elif (not rip_next) and ((energy < 20) or (not mangle_next)):
             self.innervate_or_shift(time)
 

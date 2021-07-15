@@ -574,9 +574,27 @@ iteration_input = dbc.Col([
         id='no_rip'
     ),
     dbc.Checklist(
+        options=[{'label': ' use Mangle trick', 'value': 'use_mangle_trick'}],
+        value=['use_mangle_trick'], id='use_mangle_trick'
+    ),
+    dbc.Checklist(
         options=[{'label': ' use Innervate', 'value': 'use_innervate'}],
         value=['use_innervate'], id='use_innervate'
     ),
+    dbc.Row([
+        dbc.Col(dbc.Checklist(
+            options=[{'label': " use Ferocious Bite with", 'value': 'bite'}],
+            value=[], id='use_bite',
+        ), width='auto'),
+        dbc.Col('with', width='auto'),
+        dbc.Col(dbc.Input(
+            type='number', value=4, id='bite_time', min=0.0, step=0.1,
+            style={'marginTop': '-7%', 'width': '40%'},
+        ), width='auto'),
+        dbc.Col(
+            'seconds left on Rip', width='auto', style={'marginLeft': '-20%'}
+        )
+    ],),
     html.Div([
         dbc.Button(
             "Run", id='run_button', n_clicks=0, size='lg', color='success',
@@ -1019,7 +1037,7 @@ def run_sim(sim, num_replicates):
     table = []
 
     for ability in dmg_breakdown:
-        if ability in ['Claw', 'Ferocious Bite']:
+        if ability in ['Claw']:
             continue
 
         ability_dps = dmg_breakdown[ability]['damage'] / sim.fight_length
@@ -1204,7 +1222,10 @@ def plot_new_trajectory(sim, show_whites):
     State('prepop_numticks', 'value'),
     State('allow_early_rip', 'value'),
     State('no_rip', 'value'),
+    State('use_mangle_trick', 'value'),
     State('use_innervate', 'value'),
+    State('use_bite', 'value'),
+    State('bite_time', 'value'),
     State('num_replicates', 'value'),
     State('calc_mana_weights', 'checked'),
     State('show_whites', 'checked'))
@@ -1217,7 +1238,8 @@ def compute(
         cheap_pots, ferocious_inspiration, bonuses, feral_aggression,
         savage_fury, naturalist, natural_shapeshifter, intensity, fight_length,
         boss_armor, boss_debuffs, prepop_TF, prepop_numticks, allow_early_rip,
-        no_rip, use_innervate, num_replicates, calc_mana_weights, show_whites
+        no_rip, use_mangle_trick, use_innervate, use_bite, bite_time,
+        num_replicates, calc_mana_weights, show_whites
 ):
     ctx = dash.callback_context
 
@@ -1256,7 +1278,9 @@ def compute(
         player, fight_length + 1e-9, num_mcp=max_mcp,
         boss_armor=boss_armor, prepop_TF=bool(prepop_TF),
         prepop_numticks=int(prepop_numticks), min_combos_for_rip=rip_cp,
-        use_innervate=bool(use_innervate)
+        use_innervate=bool(use_innervate),
+        use_mangle_trick=bool(use_mangle_trick), use_bite=bool(use_bite),
+        bite_time=bite_time
     )
     sim.set_active_debuffs(boss_debuffs)
 
