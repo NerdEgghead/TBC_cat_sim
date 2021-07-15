@@ -960,7 +960,7 @@ def create_buffed_player(
     )
     buffed_hit = (
         min(9, unbuffed_hit + 3 * ('imp_ff' in stat_debuffs))
-        + min(6.5, expertise_rating / 15.77)
+        + min(6.5, np.floor(expertise_rating / 3.9425) * 0.25)
     )
     buffed_mana_pool = raw_mana_unbuffed + buffed_int * 15
     buffed_mp5 = unbuffed_mp5 + 39.6 * ('wisdom' in raid_buffs)
@@ -1233,10 +1233,12 @@ def compute(
 
     # Default output is just the buffed player stats with no further calcs
     stats_output = (
-        '%.3f seconds' % player.swing_timer, '%d' % player.attack_power,
+        '%.3f seconds' % player.swing_timer,
+        '%d' % player.attack_power,
         '%.2f %%' % (player.crit_chance * 100),
-        '%.1f %%' % (player.miss_chance * 100), '%d' % player.mana_pool,
-        '%d' % player.intellect, '%d' % player.spirit, '%d' % player.mp5
+        '%.2f %%' % (player.miss_chance * 100),
+        '%d' % player.mana_pool, '%d' % player.intellect,
+        '%d' % player.spirit, '%d' % player.mp5
     )
 
     # Create Simulation object based on specified parameters
