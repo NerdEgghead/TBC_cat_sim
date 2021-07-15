@@ -115,8 +115,9 @@ class Player():
             self, attack_power, hit_chance, crit_chance, armor_pen,
             swing_timer, mana, intellect, spirit, mp5, jow=False, pot=True,
             cheap_pot=False, rune=True, t4_bonus=False, bonus_damage=0,
-            multiplier=1.1, omen=True, feral_aggression=0, savage_fury=2,
-            natural_shapeshifter=3, intensity=3, weapon_speed=3.0, log=False
+            shred_bonus=0, multiplier=1.1, omen=True, feral_aggression=0,
+            savage_fury=2, natural_shapeshifter=3, intensity=3,
+            weapon_speed=3.0, log=False
     ):
         """Initialize player with key damage parameters.
 
@@ -144,6 +145,8 @@ class Player():
                 False.
             bonus_damage (int): Bonus weapon damage from buffs such as Bogling
                 Root or Dense Weightstone. Defaults to 0.
+            shred_bonus (int): Bonus damage to Shred ability from Idols and set
+                bonuses. Defaults to 0.
             multiplier (float): Overall damage multiplier from talents and
                 buffs. Defaults to 1.1 (from 5/5 Naturalist).
             omen (bool): Whether Omen of Clarity is active. Defaults True.
@@ -175,6 +178,7 @@ class Player():
         self.rune = rune
         self.t4_bonus = t4_bonus
         self.bonus_damage = bonus_damage
+        self.shred_bonus = shred_bonus
         self.damage_multiplier = multiplier
         self.omen = omen
         self.feral_aggression = feral_aggression
@@ -269,8 +273,12 @@ class Player():
         self.multiplier = armor_multiplier * damage_multiplier
         self.white_low = (43.5 + bonus_damage) * self.multiplier
         self.white_high = (66.5 + bonus_damage) * self.multiplier
-        self.shred_low = self.white_low * 2.25 + 405 * self.multiplier
-        self.shred_high = self.white_high * 2.25 + 405 * self.multiplier
+        self.shred_low = (
+            self.white_low * 2.25 + (405 + self.shred_bonus) * self.multiplier
+        )
+        self.shred_high = (
+            self.white_high * 2.25 + (405 + self.shred_bonus) * self.multiplier
+        )
         self.bite_multiplier = self.multiplier * (1+0.03*self.feral_aggression)
         self.bite_low = {
             5: (935 + 0.15 * self.attack_power) * self.bite_multiplier,

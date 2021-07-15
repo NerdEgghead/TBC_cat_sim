@@ -314,7 +314,6 @@ buffs_1 = dbc.Col(
                        'value': 'mcp'},
                       {'label': 'Omen of Clarity', 'value': 'omen'},
                       {'label': 'Bogling Root', 'value': 'bogling_root'},
-                      {'label': '2-piece Tier 4 bonus', 'value': 't4_bonus'},
                       {'label': 'Unleashed Rage', 'value': 'unleashed_rage'}],
              value=['omen', 'unleashed_rage'], id='other_buffs',
           ), width='auto'),
@@ -339,7 +338,16 @@ buffs_1 = dbc.Col(
 )
 
 encounter_details = dbc.Col(
-    [html.H4('Encounter Details'),
+    [html.H5('Idols and Set Bonuses'),
+     dbc.Checklist(
+         options=[{'label': 'Everbloom Idol', 'value': 'everbloom'},
+                  {'label': '2-piece Tier 4 bonus', 'value': 't4_bonus'},
+                  {'label': '4-piece Tier 5 bonus', 'value': 't5_bonus'}],
+         value=['everbloom', 't4_bonus'],
+         id='bonuses'
+     ),
+     html.Br(),
+     html.H4('Encounter Details'),
      dbc.InputGroup(
          [
              dbc.InputGroupAddon('Fight Length:', addon_type='prepend'),
@@ -879,7 +887,7 @@ def create_buffed_player(
         expertise_rating, armor_pen, weapon_speed, unbuffed_mana, unbuffed_mp5,
         consumables, raid_buffs, num_mcp, other_buffs, stat_debuffs, surv_agi,
         feral_aggression, savage_fury, naturalist, natural_shapeshifter,
-        ferocious_inspiration, intensity, mana_consumes, cheap_pots
+        ferocious_inspiration, intensity, mana_consumes, cheap_pots, bonuses
 ):
     """Compute fully raid buffed stats based on specified raid buffs, and
     instantiate a Player object with those stats."""
@@ -948,6 +956,7 @@ def create_buffed_player(
         (1 + 0.02 * int(naturalist)) * 1.03**ferocious_inspiration
         * (1 + 0.02 * ('sanc_aura' in raid_buffs))
     )
+    shred_bonus = 88 * ('everbloom' in bonuses) + 75 * ('t5_bonus' in bonuses)
 
     # Create and return a corresponding Player object
     return ccs.Player(
@@ -960,8 +969,9 @@ def create_buffed_player(
         intensity=int(intensity), weapon_speed=weapon_speed,
         bonus_damage=bonus_weapon_damage, multiplier=damage_multiplier,
         jow='jow' in stat_debuffs, armor_pen=armor_pen,
-        t4_bonus='t4_bonus' in other_buffs, rune='rune' in mana_consumes,
-        pot='pot' in mana_consumes, cheap_pot=cheap_pots
+        t4_bonus='t4_bonus' in bonuses, rune='rune' in mana_consumes,
+        pot='pot' in mana_consumes, cheap_pot=cheap_pots,
+        shred_bonus=shred_bonus
     )
 
 
@@ -1161,6 +1171,7 @@ def plot_new_trajectory(sim, show_whites):
     State('mana_consumes', 'value'),
     State('cheap_pots', 'checked'),
     State('ferocious_inspiration', 'value'),
+    State('bonuses', 'value'),
     State('feral_aggression', 'value'),
     State('savage_fury', 'value'),
     State('naturalist', 'value'),
@@ -1183,8 +1194,8 @@ def compute(
         expertise_rating, weapon_speed, unbuffed_mana, unbuffed_mp5,
         consumables, raid_buffs, num_mcp, other_buffs, stat_debuffs, surv_agi,
         run_clicks, weight_clicks, graph_clicks, mana_consumes, cheap_pots,
-        ferocious_inspiration, feral_aggression, savage_fury, naturalist,
-        natural_shapeshifter, intensity, fight_length, boss_armor,
+        ferocious_inspiration, bonuses, feral_aggression, savage_fury,
+        naturalist, natural_shapeshifter, intensity, fight_length, boss_armor,
         boss_debuffs, prepop_TF, prepop_numticks, allow_early_rip, no_rip,
         use_innervate, num_replicates, calc_mana_weights, show_whites
 ):
@@ -1197,7 +1208,7 @@ def compute(
         expertise_rating, armor_pen, weapon_speed, unbuffed_mana, unbuffed_mp5,
         consumables, raid_buffs, num_mcp, other_buffs, stat_debuffs, surv_agi,
         feral_aggression, savage_fury, naturalist, natural_shapeshifter,
-        ferocious_inspiration, intensity, mana_consumes, cheap_pots
+        ferocious_inspiration, intensity, mana_consumes, cheap_pots, bonuses
     )
 
     # Default output is just the buffed player stats with no further calcs
