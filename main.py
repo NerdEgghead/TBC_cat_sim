@@ -852,6 +852,13 @@ weights_section = dbc.Col([
                     ])),
                     html.Tbody(id='stat_weight_table'),
                 ]),
+                html.Div(
+                    html.A(
+                        'Seventy Upgrades Import Link',
+                        href='https://seventyupgrades.com', target='_blank'
+                    ),
+                    id='import_link'
+                )
             ],
             id='loading_4', type='default'
         ),
@@ -1087,7 +1094,7 @@ def calc_weights(
             'Stat weight calculation requires the simulation to be run with at'
             ' least 20,000 replicates.'
         )
-        return 'Error: ', error_msg, []
+        return 'Error: ', error_msg, [], ''
 
     # Do fresh weights calculation
     weights_table = []
@@ -1111,15 +1118,19 @@ def calc_weights(
             html.Td('%.2f' % weight),
         ]))
 
+    # Generate 70upgrades import link for raw stats
+    stat_multiplier = (1 + 0.1 * ('kings' in raid_buffs)) * 1.03
+    url = ccs.gen_import_link(stat_weights, multiplier=stat_multiplier)
+    link = html.A('Seventy Upgrades Import Link', href=url, target='_blank')
+
     # Only calculate mana stats if requested
     if calc_mana_weights:
-        stat_multiplier = (1 + 0.1 * ('kings' in raid_buffs)) * 1.03
         append_mana_weights(
             weights_table, sim, num_replicates, time_to_oom, avg_dps,
             dps_per_AP, stat_multiplier
         )
 
-    return 'Stat Breakdown', '', weights_table
+    return 'Stat Breakdown', '', weights_table, link
 
 
 def plot_new_trajectory(sim, show_whites):
@@ -1181,6 +1192,7 @@ def plot_new_trajectory(sim, show_whites):
     Output('error_str', 'children'),
     Output('error_msg', 'children'),
     Output('stat_weight_table', 'children'),
+    Output('import_link', 'children'),
     Output('energy_flow', 'figure'),
     Output('combat_log', 'children'),
     Input('unbuffed_strength', 'value'),
@@ -1301,7 +1313,7 @@ def compute(
             raid_buffs, 'unleashed_rage' in other_buffs
         )
     else:
-        weights_output = ('Stat Breakdown', '', [])
+        weights_output = ('Stat Breakdown', '', [], '')
 
     # If "Generate Example" button was pressed, do it.
     if (ctx.triggered and
