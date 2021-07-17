@@ -4,6 +4,8 @@ import numpy as np
 import copy
 import collections
 import urllib
+import multiprocessing
+import psutil
 
 
 def calc_white_damage(low_end, high_end, miss_chance, crit_chance):
@@ -1319,6 +1321,42 @@ class Simulation():
 
         return output
 
+    def iterate(self, *args):
+        """Perform one iteration of a multi-replicate calculation with a
+        randomized fight length.
+
+        Returns:
+            avg_dps (float): Average DPS on this iteration.
+            dmg_breakdown (dict): Breakdown of cast count and damage done by
+                each player ability on this iteration.
+            time_to_oom (float): Time at which player went oom in this
+                iteration. If the player did not oom, then the fight length
+                used in this iteration will be returned instead.
+        """
+        # Since we're getting the same snapshot of the Simulation object
+        # when multiple iterations are run in parallel, we need to generate a
+        # new random seed.
+        np.random.seed()
+
+        # Randomize fight length to avoid haste clipping effects. We will
+        # use a normal distribution centered around the target length, with
+        # a standard deviation of 1 second (unhasted swing timer). Impact
+        # of the choice of distribution needs to be assessed...
+        base_fight_length = self.fight_length
+        randomized_fight_length = base_fight_length + np.random.randn()
+        self.fight_length = randomized_fight_length
+
+        _, damage, _, _, dmg_breakdown = self.run()
+        avg_dps = np.sum(damage) / self.fight_length
+        self.fight_length = base_fight_length
+
+        if self.time_to_oom is None:
+            oom_time = randomized_fight_length
+        else:
+            oom_time = self.time_to_oom
+
+        return avg_dps, dmg_breakdown, oom_time
+
     def run_replicates(self, num_replicates, detailed_output=False):
         """Perform several runs of the simulation in order to collect
         statistics on performance.
@@ -1349,20 +1387,16 @@ class Simulation():
         if detailed_output:
             oom_times = np.zeros(num_replicates)
 
-        for i in range(num_replicates):
-            # Randomize fight length to avoid haste clipping effects. We will
-            # use a normal distribution centered around the target length, with
-            # a standard deviation of 1 second (unhasted swing timer). Impact
-            # of the choice of distribution needs to be assessed...
-            base_fight_length = self.fight_length
-            randomized_fight_length = base_fight_length + np.random.randn()
-            self.fight_length = randomized_fight_length
-            _, damage, _, _, dmg_breakdown = self.run()
-            avg_dps = np.sum(damage) / self.fight_length
+        # Create pool of workers to run replicates in parallel
+        pool = multiprocessing.Pool(processes=psutil.cpu_count(logical=False))
+        i = 0
+
+        for output in pool.imap(self.iterate, range(num_replicates)):
+            avg_dps, dmg_breakdown, time_to_oom = output
             dps_vals[i] = avg_dps
-            self.fight_length = base_fight_length
 
             if not detailed_output:
+                i += 1
                 continue
 
             # Consolidate damage breakdown for the fight
@@ -1377,10 +1411,10 @@ class Simulation():
                         )
 
             # Consolidate oom time
-            if self.time_to_oom is None:
-                oom_times[i] = randomized_fight_length
-            else:
-                oom_times[i] = self.time_to_oom
+            oom_times[i] = time_to_oom
+            i += 1
+
+        pool.close()
 
         if not detailed_output:
             return dps_vals
