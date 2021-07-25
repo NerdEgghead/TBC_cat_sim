@@ -334,7 +334,11 @@ buffs_1 = dbc.Col(
                        'value': 'mcp'},
                       {'label': 'Omen of Clarity', 'value': 'omen'},
                       {'label': 'Bogling Root', 'value': 'bogling_root'},
-                      {'label': 'Unleashed Rage', 'value': 'unleashed_rage'}],
+                      {'label': 'Unleashed Rage', 'value': 'unleashed_rage'},
+                      {
+                          'label': 'Braided Eternium Chain',
+                          'value': 'be_chain'
+                      }],
              value=['omen'], id='other_buffs',
           ), width='auto'),
           dbc.Col(dbc.Input(
@@ -983,6 +987,7 @@ def create_buffed_player(
     added_crit_rating = (
         20 * ('agi_elixir' in consumables)
         + 14 * ('weightstone' in consumables)
+        + 28 * ('be_chain' in other_buffs)
     )
     buffed_crit = (
         raw_crit_unbuffed + buffed_agi / 20 + 3 * ('jotc' in stat_debuffs)
