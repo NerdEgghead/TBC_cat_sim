@@ -11,6 +11,7 @@ import numpy as np
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 import tbc_cat_sim as ccs
+import multiprocessing
 
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
@@ -1326,6 +1327,7 @@ def compute(
 
 
 if __name__ == '__main__':
+    multiprocessing.freeze_support()
     app.run_server(
-        host='0.0.0.0', port=8080, debug=True
+        host='0.0.0.0', port=8080, debug=False
     )
