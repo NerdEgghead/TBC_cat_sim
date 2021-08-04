@@ -276,10 +276,13 @@ buffs_1 = dbc.Col(
      dbc.Checklist(
          options=[{'label': 'Elixir of Major Agility', 'value': 'agi_elixir'},
                   {'label': 'Warp Burger / Grilled Mudfish', 'value': 'food'},
-                  {'label': 'Scroll of Agility V', 'value': 'scroll'},
+                  {'label': 'Scroll of Agility V', 'value': 'scroll_agi'},
+                  {'label': 'Scroll of Strength V', 'value': 'scroll_str'},
                   {'label': 'Consecrated Sharpening Stone', 'value': 'consec'},
                   {'label': 'Adamantite Weightstone', 'value': 'weightstone'}],
-         value=['agi_elixir', 'food', 'scroll', 'weightstone'],
+         value=[
+             'agi_elixir', 'food', 'scroll_agi', 'scroll_str', 'weightstone'
+         ],
          id='consumables'
      ),
      dbc.Row(
@@ -332,7 +335,11 @@ buffs_1 = dbc.Col(
                        'value': 'mcp'},
                       {'label': 'Omen of Clarity', 'value': 'omen'},
                       {'label': 'Bogling Root', 'value': 'bogling_root'},
-                      {'label': 'Unleashed Rage', 'value': 'unleashed_rage'}],
+                      {'label': 'Unleashed Rage', 'value': 'unleashed_rage'},
+                      {
+                          'label': 'Braided Eternium Chain',
+                          'value': 'be_chain'
+                      }],
              value=['omen'], id='other_buffs',
           ), width='auto'),
           dbc.Col(dbc.Input(
@@ -953,11 +960,12 @@ def create_buffed_player(
 
     buffed_strength = stat_multiplier * (unbuffed_strength + 1.03 * (
         added_stats + 88.55 * ('str_totem' in raid_buffs)
+        + 20 * ('scroll_str' in consumables)
     ))
     buffed_agi = stat_multiplier * (unbuffed_agi + 1.03 * (
         added_stats + 88.55 * ('agi_totem' in raid_buffs)
         + 35 * ('agi_elixir' in consumables) + 20 * ('food' in consumables)
-        + 20 * ('scroll' in consumables)
+        + 20 * ('scroll_agi' in consumables)
     ))
     buffed_int = stat_multiplier * (
         unbuffed_int + 1.2 * 1.03 * (added_stats + 31 * ('ai' in raid_buffs))
@@ -980,6 +988,7 @@ def create_buffed_player(
     added_crit_rating = (
         20 * ('agi_elixir' in consumables)
         + 14 * ('weightstone' in consumables)
+        + 28 * ('be_chain' in other_buffs)
     )
     buffed_crit = (
         raw_crit_unbuffed + buffed_agi / 20 + 3 * ('jotc' in stat_debuffs)
