@@ -12,6 +12,8 @@ from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 import tbc_cat_sim as ccs
 import multiprocessing
+import trinkets
+import copy
 
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
@@ -603,6 +605,30 @@ iteration_input = dbc.Col([
             'seconds left on Rip', width='auto', style={'marginLeft': '-20%'}
         )
     ],),
+    html.Br(),
+    html.H5('Trinkets'),
+    dbc.Row([
+        dbc.Col(dbc.Select(
+            id='trinket_1',
+            options=[
+                {'label': 'Empty', 'value': 'none'},
+                {'label': 'Bloodlust Brooch', 'value': 'brooch'},
+            ],
+            value='none'
+        )),
+        dbc.Col(dbc.Select(
+            id='trinket_2',
+            options=[
+                {'label': 'Empty', 'value': 'none'},
+                {'label': 'Bloodlust Brooch', 'value': 'brooch'},
+            ],
+            value='none'
+        )),
+    ]),
+    html.Div(
+        'Make sure not to include passive trinket stats in the sim input.',
+        style={'marginTop': '2.5%'},
+    ),
     html.Div([
         dbc.Button(
             "Run", id='run_button', n_clicks=0, size='lg', color='success',
@@ -931,6 +957,35 @@ app.layout = html.Div([
 
 
 # Helper functions used in master callback
+def process_trinkets(trinket_1, trinket_2, player, ap_mod):
+    proc_trinkets = []
+    all_trinkets = []
+    trinket_library = copy.deepcopy(trinkets.trinket_library)
+
+    for trinket in [trinket_1, trinket_2]:
+        if trinket == 'none':
+            continue
+
+        trinket_params = trinket_library[trinket]
+
+        for stat, increment in trinket_params['passive_stats'].items():
+            if stat == 'attack_power':
+                increment *= ap_mod
+
+            setattr(player, stat, getattr(player, stat) + increment)
+
+        active_stats = trinket_params['active_stats']
+
+        if active_stats['stat_name'] == 'attack_power':
+            active_stats['stat_increment'] *= ap_mod
+
+        if trinket_params['type'] == 'activated':
+            all_trinkets.append(trinkets.ActivatedTrinket(**active_stats))
+
+    player.proc_trinkets = proc_trinkets
+    return all_trinkets
+
+
 def create_buffed_player(
         unbuffed_strength, unbuffed_agi, unbuffed_int, unbuffed_spirit,
         unbuffed_ap, unbuffed_crit, unbuffed_hit, haste_rating,
@@ -1013,7 +1068,7 @@ def create_buffed_player(
     shred_bonus = 88 * ('everbloom' in bonuses) + 75 * ('t5_bonus' in bonuses)
 
     # Create and return a corresponding Player object
-    return ccs.Player(
+    player = ccs.Player(
         attack_power=buffed_attack_power, hit_chance=buffed_hit / 100,
         crit_chance=buffed_crit / 100, swing_timer=buffed_swing_timer,
         mana=buffed_mana_pool, intellect=buffed_int, spirit=buffed_spirit,
@@ -1027,6 +1082,7 @@ def create_buffed_player(
         pot='pot' in mana_consumes, cheap_pot=cheap_pots,
         shred_bonus=shred_bonus
     )
+    return player, ap_mod
 
 
 def run_sim(sim, num_replicates):
@@ -1224,6 +1280,8 @@ def plot_new_trajectory(sim, show_whites):
     Input('other_buffs', 'value'),
     Input('stat_debuffs', 'value'),
     Input('surv_agi', 'value'),
+    Input('trinket_1', 'value'),
+    Input('trinket_2', 'value'),
     Input('run_button', 'n_clicks'),
     Input('weight_button', 'n_clicks'),
     Input('graph_button', 'n_clicks'),
@@ -1256,17 +1314,18 @@ def compute(
         unbuffed_ap, unbuffed_crit, unbuffed_hit, haste_rating, armor_pen,
         expertise_rating, weapon_speed, unbuffed_mana, unbuffed_mp5,
         consumables, raid_buffs, num_mcp, other_buffs, stat_debuffs, surv_agi,
-        run_clicks, weight_clicks, graph_clicks, weapon_damage, mana_consumes,
-        cheap_pots, ferocious_inspiration, bonuses, feral_aggression,
-        savage_fury, naturalist, natural_shapeshifter, intensity, fight_length,
-        boss_armor, boss_debuffs, prepop_TF, prepop_numticks, allow_early_rip,
-        no_rip, use_mangle_trick, use_innervate, use_bite, bite_time,
-        num_replicates, calc_mana_weights, show_whites
+        trinket_1, trinket_2, run_clicks, weight_clicks, graph_clicks,
+        weapon_damage, mana_consumes, cheap_pots, ferocious_inspiration,
+        bonuses, feral_aggression, savage_fury, naturalist,
+        natural_shapeshifter, intensity, fight_length, boss_armor,
+        boss_debuffs, prepop_TF, prepop_numticks, allow_early_rip, no_rip,
+        use_mangle_trick, use_innervate, use_bite, bite_time, num_replicates,
+        calc_mana_weights, show_whites
 ):
     ctx = dash.callback_context
 
     # Create Player object based on specified stat inputs and talents
-    player = create_buffed_player(
+    player, ap_mod = create_buffed_player(
         unbuffed_strength, unbuffed_agi, unbuffed_int, unbuffed_spirit,
         unbuffed_ap, unbuffed_crit, unbuffed_hit, haste_rating,
         expertise_rating, armor_pen, weapon_damage, weapon_speed,
@@ -1275,6 +1334,9 @@ def compute(
         naturalist, natural_shapeshifter, ferocious_inspiration, intensity,
         mana_consumes, cheap_pots, bonuses
     )
+
+    # Process trinkets
+    trinket_list = process_trinkets(trinket_1, trinket_2, player, ap_mod)
 
     # Default output is just the buffed player stats with no further calcs
     stats_output = (
@@ -1302,9 +1364,10 @@ def compute(
         prepop_numticks=int(prepop_numticks), min_combos_for_rip=rip_cp,
         use_innervate=bool(use_innervate),
         use_mangle_trick=bool(use_mangle_trick), use_bite=bool(use_bite),
-        bite_time=bite_time
+        bite_time=bite_time, trinkets=trinket_list
     )
     sim.set_active_debuffs(boss_debuffs)
+    player.calc_damage_params(**sim.params)
 
     # If either "Run" or "Stat Weights" button was pressed, then perform a
     # sim run for the specified number of replicates.

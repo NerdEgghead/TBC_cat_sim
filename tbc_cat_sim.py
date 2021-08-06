@@ -168,7 +168,7 @@ class Player():
             cheap_pot=False, rune=True, t4_bonus=False, bonus_damage=0,
             shred_bonus=0, multiplier=1.1, omen=True, feral_aggression=0,
             savage_fury=2, natural_shapeshifter=3, intensity=3,
-            weapon_speed=3.0, log=False
+            weapon_speed=3.0, proc_trinkets=[], log=False
     ):
         """Initialize player with key damage parameters.
 
@@ -210,6 +210,9 @@ class Player():
             intensity (int): Points taken in Intensity talen. Defaults to 3.
             weapon_speed (float): Equipped weapon speed, used for calculating
                 Omen of Clarity proc rate. Defaults to 3.0.
+            proc_trinkets (list of trinkets.ProcTrinket): If applicable, a list
+                of ProcTrinket objects modeling each on-hit or on-crit trinket
+                used by the player.
             log (bool): If True, maintain a log of the most recent event,
                 formatted as a list of strings [event, outcome, energy, combo
                 points]. Defaults False.
@@ -240,6 +243,7 @@ class Player():
             'white': 2.0/60,
             'yellow': 2.0/60 * weapon_speed
         }
+        self.proc_trinkets = proc_trinkets
         self.set_mana_regen()
         self.log = log
         self.reset()
@@ -439,6 +443,22 @@ class Player():
             self.energy = min(self.energy + 20, 100)
             self.t4_proc = True
 
+    def check_procs(self, yellow=False, crit=False):
+        """Check all relevant procs that trigger on a successful attack.
+
+        Arguments:
+            yellow (bool): Check proc for a yellow ability rather than a melee
+                swing. Defaults False.
+            crit (bool): Whether the attack was a critical strike. Defaults
+                False.
+        """
+        self.check_omen_proc(yellow=yellow)
+        self.check_jow_proc()
+        self.check_t4_proc()
+
+        for trinket in self.proc_trinkets:
+            trinket.check_for_proc(crit)
+
     def regen_mana(self, pot=False):
         """Update player mana on a Spirit tick.
 
@@ -510,9 +530,7 @@ class Player():
 
         # Check for Omen and JoW procs
         if not miss:
-            self.check_omen_proc()
-            self.check_jow_proc()
-            self.check_t4_proc()
+            self.check_procs(crit=crit)
 
         # Log the swing
         self.dmg_breakdown['Melee']['casts'] += 1
@@ -601,9 +619,7 @@ class Player():
 
         # Check for Omen and JoW procs
         if not miss:
-            self.check_omen_proc(yellow=True)
-            self.check_jow_proc()
-            self.check_t4_proc()
+            self.check_procs(yellow=True, crit=crit)
 
         # Log the cast
         self.dmg_breakdown[ability_name]['casts'] += 1
@@ -680,9 +696,7 @@ class Player():
 
         # Check for Omen and JoW procs
         if not miss:
-            self.check_omen_proc(yellow=True)
-            self.check_jow_proc()
-            self.check_t4_proc()
+            self.check_procs(yellow=True, crit=crit)
 
         # Log the cast
         self.dmg_breakdown['Ferocious Bite']['casts'] += 1
@@ -720,9 +734,7 @@ class Player():
 
         # Check for Omen and JoW procs
         if not miss:
-            self.check_omen_proc(yellow=True)
-            self.check_jow_proc()
-            self.check_t4_proc()
+            self.check_procs(yellow=True)
 
         # Log the cast and total damage that will be done
         self.dmg_breakdown['Rip']['casts'] += 1
@@ -812,7 +824,7 @@ class Simulation():
         'use_innervate': True
     }
 
-    def __init__(self, player, fight_length, num_mcp=0, **kwargs):
+    def __init__(self, player, fight_length, num_mcp=0, trinkets=[], **kwargs):
         """Initialize simulation.
 
         Arguments:
@@ -823,6 +835,8 @@ class Simulation():
                 fight. If nonzero, the Player object should be instantiated
                 with a hasted swing timer, and the simulation will slow it down
                 once the haste buff expires. Defaults to 0.
+            trinkets (list of trinkets.Trinket): List of ActivatedTrinket or
+                ProcTrinket objects that will be used on cooldown.
             kwargs (dict): Key, value pairs for all other encounter parameters,
                 including boss armor, relevant debuffs, and player stregy
                 specification. An error will be thrown if the parameter is not
@@ -832,6 +846,7 @@ class Simulation():
         self.player = player
         self.fight_length = fight_length
         self.max_mcp = int(round(num_mcp))
+        self.trinkets = trinkets
         self.params = copy.deepcopy(self.default_params)
         self.strategy = copy.deepcopy(self.default_strategy)
 
@@ -1015,13 +1030,27 @@ class Simulation():
 
         return 0.0
 
-    def update_swing_times(self, start_time):
+    def update_swing_times(self, time, new_swing_timer, first_swing=False):
         """Generate an updated list of swing times after changes to the swing
         timer have occurred.
 
         Arguments:
-            start_time (float): Time of first swing, in seconds.
+            time (float): Simulation time at which swing timer is changing, in
+                seconds.
+            new_swing_timer (float): Updated swing timer.
+            first_swing (bool): If True, generate a fresh set of swing times
+                at the start of a simulation. Defaults False.
         """
+        # First calculate the start time for the next swing.
+        if first_swing:
+            start_time = time
+        else:
+            frac_remaining = (self.swing_times[0] - time) / self.swing_timer
+            start_time = time + frac_remaining * new_swing_timer
+
+        # Now update the internal swing times
+        self.swing_timer = new_swing_timer
+
         if start_time > self.fight_length - self.swing_timer:
             self.swing_times = [
                 start_time, start_time + self.swing_timer
@@ -1031,6 +1060,20 @@ class Simulation():
                 start_time, self.fight_length + self.swing_timer,
                 self.swing_timer
             ))
+
+    def apply_haste_buff(self, time, haste_rating_increment):
+        """Perform associated bookkeeping when the player Haste Rating is
+        modified.
+
+        Arguments:
+            time (float): Simulation time in seconds.
+            haste_rating_increment (int): Amount by which the player Haste
+                Rating changes.
+        """
+        new_swing_timer = calc_swing_timer(
+            calc_haste_rating(self.swing_timer) + haste_rating_increment
+        )
+        self.update_swing_times(time, new_swing_timer)
 
     def drop_tigers_fury(self, time):
         """Remove Tiger's Fury buff and document if requested.
@@ -1091,9 +1134,10 @@ class Simulation():
         # Same thing for swing times, except that the first swing will occur at
         # most 100 ms after the first special just to simulate some latency and
         # avoid errors from Omen procs on the first swing.
-        self.swing_timer = self.player.swing_timer
         swing_timer_start = 0.1 * np.random.rand()
-        self.update_swing_times(swing_timer_start)
+        self.update_swing_times(
+            swing_timer_start, self.player.swing_timer, first_swing=True
+        )
 
         # Adjust damage calculation if Tiger's Fury is pre-popped, and
         # calculate when it should fall off for the specified strategy. Assume
@@ -1118,8 +1162,14 @@ class Simulation():
             mcp_end = 90.0
             self.num_mcp -= 1
             self.mcp_cd = 0.0
+            self.proc_end_times = [mcp_end]
         else:
             self.mcp_equipped = False
+            self.proc_end_times = []
+
+        # Reset all trinkets to fresh state
+        for trinket in self.trinkets:
+            trinket.reset()
 
         # Create placeholder for time to OOM if the player goes OOM in the run
         self.time_to_oom = None
@@ -1176,13 +1226,10 @@ class Simulation():
                 tf_active = False
 
             # Check if haste buff is expired or if a new one can be popped
-            if self.mcp_equipped and mcp_active and (time >= mcp_end):
+            if self.mcp_equipped and mcp_active and (time > mcp_end - 1e-9):
                 mcp_active = False
                 self.mcp_equipped = False
-                self.swing_timer = calc_swing_timer(
-                    calc_haste_rating(self.swing_timer) - 500
-                )
-                self.update_swing_times(self.swing_times[0])
+                self.apply_haste_buff(mcp_end, -500)
 
                 if self.log:
                     self.combat_log.append(self.gen_log(
@@ -1190,11 +1237,9 @@ class Simulation():
                     ))
             elif self.mcp_equipped and (not mcp_active) and (self.mcp_cd == 0):
                 mcp_active = True
-                self.swing_timer = calc_swing_timer(
-                    calc_haste_rating(self.swing_timer) + 500
-                )
-                self.update_swing_times(self.swing_times[0])
+                self.apply_haste_buff(time, 500)
                 mcp_end = time + 90.0
+                self.proc_end_times.append(mcp_end)
 
                 if self.log:
                     self.combat_log.append(
@@ -1230,6 +1275,10 @@ class Simulation():
                     self.combat_log.append(
                         self.gen_log(self.rip_end, 'Rip', 'falls off')
                     )
+
+            # Activate or deactivate trinkets if appropriate
+            for trinket in self.trinkets:
+                trinket.update(time, self.player, self)
 
             # Check if a melee swing happens at this time
             if time == self.swing_times[0]:
@@ -1298,6 +1347,14 @@ class Simulation():
                 self.drop_tigers_fury(time)
                 tf_active = False
 
+            # If a trinket proc occurred from a swing or special, apply it
+            for trinket in self.trinkets:
+                trinket.update(time, self.player, self)
+
+            # If a proc ended at this timestep, remove it from the list
+            if self.proc_end_times and (time == self.proc_end_times[0]):
+                self.proc_end_times.pop(0)
+
             # Update time
             previous_time = time
             next_swing = self.swing_times[0]
@@ -1311,6 +1368,8 @@ class Simulation():
                 time = min(time, self.rip_ticks[0])
             if self.player.pot_active:
                 time = min(time, self.player.pot_ticks[0])
+            if self.proc_end_times:
+                time = min(time, self.proc_end_times[0])
 
         # Replace logged Rip damgae with the actual value realized in the run
         self.player.dmg_breakdown['Rip']['damage'] = rip_damage
