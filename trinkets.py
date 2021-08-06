@@ -165,7 +165,7 @@ class ProcTrinket(Trinket):
 
     def __init__(
         self, stat_name, stat_increment, proc_name, chance_on_hit,
-        chance_on_crit, proc_duration, cooldown
+        proc_duration, cooldown, chance_on_crit=0.0, yellow_chance_on_hit=None
     ):
         """Initialize a generic trinket with key parameters.
 
@@ -182,7 +182,12 @@ class ProcTrinket(Trinket):
             chance_on_hit (float): Probability of a proc on a successful normal
                 hit, between 0 and 1.
             chance_on_crit (float): Probability of a proc on a critical strike,
-                between 0 and 1.
+                between 0 and 1. Defaults to 0.
+            yellow_chance_on_hit (float): If supplied, use a separate proc rate
+                for special abilities. In this case, chance_on_hit will be
+                interpreted as the proc rate for white attacks. Used for ppm
+                trinkets where white and yellow proc rates are normalized
+                differently.
             proc_duration (int): Duration of the buff, in seconds.
             cooldown (int): Internal cooldown before the trinket can proc
                 again.
@@ -191,26 +196,40 @@ class ProcTrinket(Trinket):
             self, stat_name, stat_increment, proc_name, proc_duration,
             cooldown
         )
-        self.chance_on_hit = chance_on_hit
-        self.chance_on_crit = chance_on_crit
-        self.proc_happened = False
 
-    def check_for_proc(self, crit):
+        if yellow_chance_on_hit is not None:
+            self.rates = {
+                'white': chance_on_hit, 'yellow': yellow_chance_on_hit
+            }
+            self.separate_yellow_procs = True
+        else:
+            self.chance_on_hit = chance_on_hit
+            self.chance_on_crit = chance_on_crit
+            self.separate_yellow_procs = False
+
+    def check_for_proc(self, crit, yellow):
         """Perform random roll for a trinket proc upon a successful attack.
 
         Arguments:
             crit (bool): Whether the attack was a critical strike.
+            yellow (bool): Whether the attack was a special (ability) rather
+                than a melee attack.
         """
         if not self.can_proc:
             self.proc_happened = False
-        else:
-            proc_roll = np.random.rand()
-            proc_thresh = self.chance_on_crit if crit else self.chance_on_hit
+            return
 
-            if proc_roll < proc_thresh:
-                self.proc_happened = True
-            else:
-                self.proc_happened = False
+        proc_roll = np.random.rand()
+
+        if self.separate_yellow_procs:
+            rate = self.rates['yellow'] if yellow else self.rates['white']
+        else:
+            rate = self.chance_on_crit if crit else self.chance_on_hit
+
+        if proc_roll < rate:
+            self.proc_happened = True
+        else:
+            self.proc_happened = False
 
     def apply_proc(self):
         """Determine whether or not the trinket is activated at the current
@@ -244,6 +263,104 @@ trinket_library = {
             'proc_name': 'Lust for Battle',
             'proc_duration': 20,
             'cooldown': 120,
+        },
+    },
+    'slayers': {
+        'type': 'activated',
+        'passive_stats': {
+            'attack_power': 64,
+        },
+        'active_stats': {
+            'stat_name': 'attack_power',
+            'stat_increment': 260,
+            'proc_name': "Slayer's Crest",
+            'proc_duration': 20,
+            'cooldown': 120,
+        },
+    },
+    'icon': {
+        'type': 'activated',
+        'passive_stats': {
+            'miss_chance': -30./15.77/100,
+        },
+        'active_stats': {
+            'stat_name': 'armor_pen',
+            'stat_increment': 600,
+            'proc_name': 'Armor Penetration',
+            'proc_duration': 20,
+            'cooldown': 120,
+        },
+    },
+    'abacus': {
+        'type': 'activated',
+        'passive_stats': {
+            'attack_power': 64,
+        },
+        'active_stats': {
+            'stat_name': 'haste_rating',
+            'stat_increment': 260,
+            'proc_name': 'Haste',
+            'proc_duration': 10,
+            'cooldown': 120,
+        },
+    },
+    'hourglass': {
+        'type': 'proc',
+        'passive_stats': {
+            'crit_chance': 32./22.1/100,
+        },
+        'active_stats': {
+            'stat_name': 'attack_power',
+            'stat_increment': 300,
+            'proc_name': 'Rage of the Unraveller',
+            'proc_duration': 10,
+            'cooldown': 50,
+            'proc_type': 'chance_on_crit',
+            'proc_rate': 0.1,
+        },
+    },
+    'tsunami': {
+        'type': 'proc',
+        'passive_stats': {
+            'crit_chance': 38./22.1/100,
+            'miss_chance': -10./15.77/100,
+        },
+        'active_stats': {
+            'stat_name': 'attack_power',
+            'stat_increment': 340,
+            'proc_name': 'Fury of the Crashing Waves',
+            'proc_duration': 10,
+            'cooldown': 45,
+            'proc_type': 'chance_on_crit',
+            'proc_rate': 0.1,
+        },
+    },
+    'dst': {
+        'type': 'proc',
+        'passive_stats': {
+            'attack_power': 40,
+        },
+        'active_stats': {
+            'stat_name': 'haste_rating',
+            'stat_increment': 325,
+            'proc_name': 'Haste',
+            'proc_duration': 10,
+            'cooldown': 20,
+            'proc_type': 'ppm',
+            'proc_rate': 1.,
+        },
+    },
+    'motc': {
+        'type': 'passive',
+        'passive_stats': {
+            'attack_power': 150,
+        },
+    },
+    'dft': {
+        'type': 'passive',
+        'passive_stats': {
+            'attack_power': 56,
+            'miss_chance': -20./15.77/100,
         },
     },
 }

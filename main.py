@@ -612,7 +612,15 @@ iteration_input = dbc.Col([
             id='trinket_1',
             options=[
                 {'label': 'Empty', 'value': 'none'},
+                {'label': 'Tsunami Talisman', 'value': 'tsunami'},
                 {'label': 'Bloodlust Brooch', 'value': 'brooch'},
+                {'label': 'Hourglass of the Unraveller', 'value': 'hourglass'},
+                {'label': 'Dragonspine Trophy', 'value': 'dst'},
+                {'label': 'Mark of the Champion', 'value': 'motc'},
+                {'label': "Slayer's Crest", 'value': 'slayers'},
+                {'label': 'Drake Fang Talisman', 'value': 'dft'},
+                {'label': 'Icon of Unyielding Courage', 'value': 'icon'},
+                {'label': 'Abacus of Violent Odds', 'value': 'abacus'},
             ],
             value='none'
         )),
@@ -620,7 +628,15 @@ iteration_input = dbc.Col([
             id='trinket_2',
             options=[
                 {'label': 'Empty', 'value': 'none'},
+                {'label': 'Tsunami Talisman', 'value': 'tsunami'},
                 {'label': 'Bloodlust Brooch', 'value': 'brooch'},
+                {'label': 'Hourglass of the Unraveller', 'value': 'hourglass'},
+                {'label': 'Dragonspine Trophy', 'value': 'dst'},
+                {'label': 'Mark of the Champion', 'value': 'motc'},
+                {'label': "Slayer's Crest", 'value': 'slayers'},
+                {'label': 'Drake Fang Talisman', 'value': 'dft'},
+                {'label': 'Icon of Unyielding Courage', 'value': 'icon'},
+                {'label': 'Abacus of Violent Odds', 'value': 'abacus'},
             ],
             value='none'
         )),
@@ -957,7 +973,7 @@ app.layout = html.Div([
 
 
 # Helper functions used in master callback
-def process_trinkets(trinket_1, trinket_2, player, ap_mod):
+def process_trinkets(trinket_1, trinket_2, player, ap_mod, miss_chance):
     proc_trinkets = []
     all_trinkets = []
     trinket_library = copy.deepcopy(trinkets.trinket_library)
@@ -971,8 +987,13 @@ def process_trinkets(trinket_1, trinket_2, player, ap_mod):
         for stat, increment in trinket_params['passive_stats'].items():
             if stat == 'attack_power':
                 increment *= ap_mod
+            if stat == 'miss_chance':
+                increment = max(increment, -miss_chance)
 
             setattr(player, stat, getattr(player, stat) + increment)
+
+        if trinket_params['type'] == 'passive':
+            continue
 
         active_stats = trinket_params['active_stats']
 
@@ -981,6 +1002,21 @@ def process_trinkets(trinket_1, trinket_2, player, ap_mod):
 
         if trinket_params['type'] == 'activated':
             all_trinkets.append(trinkets.ActivatedTrinket(**active_stats))
+        else:
+            proc_type = active_stats.pop('proc_type')
+
+            if proc_type == 'chance_on_crit':
+                active_stats['chance_on_hit'] = 0.0
+                active_stats['chance_on_crit'] = active_stats.pop('proc_rate')
+            elif proc_type == 'ppm':
+                ppm = active_stats.pop('proc_rate')
+                active_stats['chance_on_hit'] = ppm/60.
+                active_stats['yellow_chance_on_hit'] = (
+                    ppm/60. * player.weapon_speed
+                )
+
+            all_trinkets.append(trinkets.ProcTrinket(**active_stats))
+            proc_trinkets.append(all_trinkets[-1])
 
     player.proc_trinkets = proc_trinkets
     return all_trinkets
@@ -1049,8 +1085,9 @@ def create_buffed_player(
         raw_crit_unbuffed + buffed_agi / 20 + 3 * ('jotc' in stat_debuffs)
         + added_crit_rating / 22.1
     )
+    miss_chance = max(0., 9. - unbuffed_hit - 3 * ('imp_ff' in stat_debuffs))
     buffed_hit = (
-        min(9, unbuffed_hit + 3 * ('imp_ff' in stat_debuffs))
+        (9. - miss_chance)
         + min(6.5, np.floor(expertise_rating / 3.9425) * 0.25)
     )
     buffed_mana_pool = raw_mana_unbuffed + buffed_int * 15
@@ -1082,7 +1119,7 @@ def create_buffed_player(
         pot='pot' in mana_consumes, cheap_pot=cheap_pots,
         shred_bonus=shred_bonus
     )
-    return player, ap_mod
+    return player, ap_mod, miss_chance/100.
 
 
 def run_sim(sim, num_replicates):
@@ -1325,7 +1362,7 @@ def compute(
     ctx = dash.callback_context
 
     # Create Player object based on specified stat inputs and talents
-    player, ap_mod = create_buffed_player(
+    player, ap_mod, miss_chance = create_buffed_player(
         unbuffed_strength, unbuffed_agi, unbuffed_int, unbuffed_spirit,
         unbuffed_ap, unbuffed_crit, unbuffed_hit, haste_rating,
         expertise_rating, armor_pen, weapon_damage, weapon_speed,
@@ -1336,7 +1373,9 @@ def compute(
     )
 
     # Process trinkets
-    trinket_list = process_trinkets(trinket_1, trinket_2, player, ap_mod)
+    trinket_list = process_trinkets(
+        trinket_1, trinket_2, player, ap_mod, miss_chance
+    )
 
     # Default output is just the buffed player stats with no further calcs
     stats_output = (

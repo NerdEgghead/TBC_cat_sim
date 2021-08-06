@@ -239,9 +239,10 @@ class Player():
         self.savage_fury = savage_fury
         self.natural_shapeshifter = natural_shapeshifter
         self.intensity = intensity
+        self.weapon_speed = weapon_speed
         self.omen_rates = {
             'white': 2.0/60,
-            'yellow': 2.0/60 * weapon_speed
+            'yellow': 2.0/60 * self.weapon_speed
         }
         self.proc_trinkets = proc_trinkets
         self.set_mana_regen()
@@ -457,7 +458,7 @@ class Player():
         self.check_t4_proc()
 
         for trinket in self.proc_trinkets:
-            trinket.check_for_proc(crit)
+            trinket.check_for_proc(crit, yellow)
 
     def regen_mana(self, pot=False):
         """Update player mana on a Spirit tick.
