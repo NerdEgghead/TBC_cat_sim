@@ -924,7 +924,10 @@ class Simulation():
             # in caster form. We'll use the same logic as at the start of
             # combat, setting the first swing just slightly after the shift
             # back into cat.
-            self.update_swing_times(time + 1.5 + 0.1 * np.random.rand())
+            self.update_swing_times(
+                time + 1.5 + 0.1 * np.random.rand(), self.swing_timer,
+                first_swing=True
+            )
         else:
             self.player.shift(time)
 
