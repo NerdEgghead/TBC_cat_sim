@@ -562,6 +562,52 @@ iteration_input = dbc.Col([
         )]),
     html.Br(),
     html.H5('Player Strategy'),
+    dbc.InputGroup(
+        [
+            dbc.InputGroupAddon('Finishing move:', addon_type='prepend'),
+            dbc.Select(
+                options=[
+                    {'label': 'Rip', 'value': 'rip'},
+                    {'label': 'Ferocious Bite', 'value': 'bite'},
+                    {'label': 'None', 'value': 'none'},
+                ],
+                value='rip', id='finisher',
+            ),
+        ],
+        style={'width': '45%', 'marginBottom': '1.5%'}
+    ),
+    dbc.InputGroup(
+        [
+            dbc.InputGroupAddon(
+                'Minimum combo points for Rip:', addon_type='prepend'
+            ),
+            dbc.Select(
+                options=[
+                    {'label': '4', 'value': 4},
+                    {'label': '5', 'value': 5},
+                ],
+                value=4, id='rip_cp',
+            ),
+        ],
+        style={'width': '48%', 'marginBottom': '1.5%'}
+    ),
+    dbc.InputGroup(
+        [
+            dbc.InputGroupAddon(
+                'Minimum combo points for Ferocious Bite:',
+                addon_type='prepend'
+            ),
+            dbc.Select(
+                options=[
+                    {'label': '4', 'value': 4},
+                    {'label': '5', 'value': 5},
+                ],
+                value=4, id='bite_cp',
+            ),
+        ],
+        style={'width': '60%'}
+    ),
+    html.Br(),
     dbc.Row([
         dbc.Col(dbc.Checklist(
             options=[{'label': " pre-pop Tiger's Fury", 'value': 'prepop_TF'}],
@@ -575,14 +621,6 @@ iteration_input = dbc.Col([
         ), width='auto'),
         dbc.Col('energy ticks before combat', width='auto')
     ],),
-    dbc.Checklist(
-        options=[{'label': ' allow 4-combo Rips', 'value': 4}], value=[4],
-        id='allow_early_rip'
-    ),
-    dbc.Checklist(
-        options=[{'label': ' no-Rip rotation', 'value': 'no_rip'}], value=[],
-        id='no_rip'
-    ),
     dbc.Checklist(
         options=[{'label': ' use Mangle trick', 'value': 'use_mangle_trick'}],
         value=['use_mangle_trick'], id='use_mangle_trick'
@@ -1335,10 +1373,11 @@ def plot_new_trajectory(sim, show_whites):
     State('fight_length', 'value'),
     State('boss_armor', 'value'),
     State('boss_debuffs', 'value'),
+    State('finisher', 'value'),
+    State('rip_cp', 'value'),
+    State('bite_cp', 'value'),
     State('prepop_TF', 'value'),
     State('prepop_numticks', 'value'),
-    State('allow_early_rip', 'value'),
-    State('no_rip', 'value'),
     State('use_mangle_trick', 'value'),
     State('use_innervate', 'value'),
     State('use_bite', 'value'),
@@ -1355,7 +1394,7 @@ def compute(
         weapon_damage, mana_consumes, cheap_pots, ferocious_inspiration,
         bonuses, feral_aggression, savage_fury, naturalist,
         natural_shapeshifter, intensity, fight_length, boss_armor,
-        boss_debuffs, prepop_TF, prepop_numticks, allow_early_rip, no_rip,
+        boss_debuffs, finisher, rip_cp, bite_cp, prepop_TF, prepop_numticks,
         use_mangle_trick, use_innervate, use_bite, bite_time, num_replicates,
         calc_mana_weights, show_whites
 ):
@@ -1389,20 +1428,15 @@ def compute(
 
     # Create Simulation object based on specified parameters
     max_mcp = num_mcp if 'mcp' in other_buffs else 0
-
-    if no_rip:
-        rip_cp = 6
-    elif allow_early_rip:
-        rip_cp = 4
-    else:
-        rip_cp = 5
+    bite = (bool(use_bite) and (finisher == 'rip')) or (finisher == 'bite')
+    rip_combos = 6 if finisher != 'rip' else int(rip_cp)
 
     sim = ccs.Simulation(
         player, fight_length + 1e-9, num_mcp=max_mcp,
         boss_armor=boss_armor, prepop_TF=bool(prepop_TF),
-        prepop_numticks=int(prepop_numticks), min_combos_for_rip=rip_cp,
-        use_innervate=bool(use_innervate),
-        use_mangle_trick=bool(use_mangle_trick), use_bite=bool(use_bite),
+        prepop_numticks=int(prepop_numticks), min_combos_for_rip=rip_combos,
+        min_combos_for_bite=int(bite_cp), use_innervate=bool(use_innervate),
+        use_mangle_trick=bool(use_mangle_trick), use_bite=bite,
         bite_time=bite_time, trinkets=trinket_list
     )
     sim.set_active_debuffs(boss_debuffs)
@@ -1440,5 +1474,5 @@ def compute(
 if __name__ == '__main__':
     multiprocessing.freeze_support()
     app.run_server(
-        host='0.0.0.0', port=8080, debug=False
+        host='0.0.0.0', port=8080, debug=True
     )

@@ -822,6 +822,7 @@ class Simulation():
         'use_mangle_trick': True,
         'use_bite': False,
         'bite_time': 4.0,
+        'min_combos_for_bite': 4,
         'use_innervate': True
     }
 
@@ -866,6 +867,13 @@ class Simulation():
         # Calculate damage ranges for player abilities under the given
         # encounter parameters.
         self.player.calc_damage_params(**self.params)
+
+        # Determine whether Ferocious Bite is to be used instead of Rip as the
+        # primary finishing move.
+        self.strategy['bite_over_rip'] = (
+            self.strategy['use_bite']
+            and (self.strategy['min_combos_for_rip'] > 5)
+        )
 
     def set_active_debuffs(self, debuff_list):
         """Set active debuffs according to a specified list.
@@ -987,13 +995,26 @@ class Simulation():
 
         energy, cp = self.player.energy, self.player.combo_points
         rip_cp = self.strategy['min_combos_for_rip']
+        bite_cp = self.strategy['min_combos_for_bite']
         rip_now = (cp >= rip_cp) and (not self.rip_debuff)
         mangle_now = (not rip_now) and (not self.mangle_debuff)
+        bite_before_rip = (
+            self.rip_debuff and self.strategy['use_bite']
+            and (self.rip_end - time >= self.strategy['bite_time'])
+        )
+        bite_now = (
+            (bite_before_rip or self.strategy['bite_over_rip'])
+            and (cp >= bite_cp)
+        )
         rip_next = (
             rip_now or ((cp >= rip_cp) and (self.rip_end <= next_tick))
         )
         mangle_next = (
             (not rip_next) and (mangle_now or (self.mangle_end <= next_tick))
+        )
+        bite_before_rip_next = (
+            bite_before_rip
+            and (self.rip_end - next_tick >= self.strategy['bite_time'])
         )
         time_to_next_tick = next_tick - time
 
@@ -1007,6 +1028,8 @@ class Simulation():
                 self.rip(time)
             elif (mangle_now and ((energy >= 40) or self.player.omen_proc)):
                 return self.mangle(time)
+            elif (bite_now and ((energy >= 35) or self.player.omen_proc)):
+                return self.player.bite()
             elif (energy >= 42) or self.player.omen_proc:
                 return self.player.shred()
         elif energy < 10:
@@ -1019,11 +1042,20 @@ class Simulation():
                 self.innervate_or_shift(time)
             elif (energy >= 40) or self.player.omen_proc:
                 return self.mangle(time)
-        elif energy >= 22:
-            if ((cp >= 4) and self.strategy['use_bite'] and (energy >= 35)
-                    and (self.rip_end - time >= self.strategy['bite_time'])
-                    and (not self.player.omen_proc)):
+        elif bite_now:
+            if (energy >= 57) or ((energy >= 15) and self.player.omen_proc):
+                return self.player.shred()
+            if energy >= 35:
                 return self.player.bite()
+            if ((energy >= 22)
+                    and (bite_before_rip and (not bite_before_rip_next))):
+                return 0.0
+            if ((energy >= 15)
+                    and ((not bite_before_rip) or bite_before_rip_next)):
+                return 0.0
+            if (not rip_next) and ((energy < 20) or (not mangle_next)):
+                self.innervate_or_shift(time)
+        elif energy >= 22:
             if (energy >= 42) or self.player.omen_proc:
                 return self.player.shred()
             if ((energy >= 40) and (time_to_next_tick > 1.0)
