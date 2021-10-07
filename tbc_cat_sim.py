@@ -823,7 +823,8 @@ class Simulation():
         'use_bite': False,
         'bite_time': 4.0,
         'min_combos_for_bite': 4,
-        'use_innervate': True
+        'use_innervate': True,
+        'bear_mangle': False,
     }
 
     def __init__(self, player, fight_length, num_mcp=0, trinkets=[], **kwargs):
@@ -963,7 +964,9 @@ class Simulation():
         # If it landed, flag the debuff as active and start timer
         if success:
             self.mangle_debuff = True
-            self.mangle_end = time + 12.0
+            self.mangle_end = (
+                np.inf if self.strategy['bear_mangle'] else (time + 12.0)
+            )
 
         return damage_done
 
@@ -1081,8 +1084,9 @@ class Simulation():
             if ((energy >= 22) and bite_before_rip
                     and (not bite_before_rip_next)):
                 return 0.0
-            if ((energy >= 15) and ((not bite_before_rip)
-                    or bite_before_rip_next or bite_at_end)):
+            if ((energy >= 15) and
+                ((not bite_before_rip)
+                 or bite_before_rip_next or bite_at_end)):
                 return 0.0
             if (not rip_next) and ((energy < 20) or (not mangle_next)):
                 self.innervate_or_shift(time)
@@ -1237,6 +1241,12 @@ class Simulation():
         # Reset all trinkets to fresh state
         for trinket in self.trinkets:
             trinket.reset()
+
+        # If a bear tank is providing Mangle uptime for us, then flag the
+        # debuff as permanently on.
+        if self.strategy['bear_mangle']:
+            self.mangle_debuff = True
+            self.mangle_end = np.inf
 
         # Create placeholder for time to OOM if the player goes OOM in the run
         self.time_to_oom = None

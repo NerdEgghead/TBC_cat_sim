@@ -628,7 +628,7 @@ iteration_input = dbc.Col([
     ),
     dbc.Checklist(
         options=[{'label': ' use Innervate', 'value': 'use_innervate'}],
-        value=['use_innervate'], id='use_innervate'
+        value=[], id='use_innervate'
     ),
     dbc.Row([
         dbc.Col(dbc.Checklist(
@@ -644,6 +644,11 @@ iteration_input = dbc.Col([
             'seconds left on Rip', width='auto', style={'marginLeft': '-20%'}
         )
     ],),
+    dbc.Checklist(
+        options=[{
+            'label': ' Mangle maintained by bear tank', 'value': 'bear_mangle'
+        }], value=[], id='bear_mangle'
+    ),
     html.Br(),
     html.H5('Trinkets'),
     dbc.Row([
@@ -1386,6 +1391,7 @@ def plot_new_trajectory(sim, show_whites):
     State('use_innervate', 'value'),
     State('use_bite', 'value'),
     State('bite_time', 'value'),
+    State('bear_mangle', 'value'),
     State('num_replicates', 'value'),
     State('calc_mana_weights', 'checked'),
     State('show_whites', 'checked'))
@@ -1399,8 +1405,8 @@ def compute(
         bonuses, feral_aggression, savage_fury, naturalist,
         natural_shapeshifter, intensity, fight_length, boss_armor,
         boss_debuffs, finisher, rip_cp, bite_cp, prepop_TF, prepop_numticks,
-        use_mangle_trick, use_innervate, use_bite, bite_time, num_replicates,
-        calc_mana_weights, show_whites
+        use_mangle_trick, use_innervate, use_bite, bite_time, bear_mangle,
+        num_replicates, calc_mana_weights, show_whites
 ):
     ctx = dash.callback_context
 
@@ -1441,7 +1447,8 @@ def compute(
         prepop_numticks=int(prepop_numticks), min_combos_for_rip=rip_combos,
         min_combos_for_bite=int(bite_cp), use_innervate=bool(use_innervate),
         use_mangle_trick=bool(use_mangle_trick), use_bite=bite,
-        bite_time=bite_time, trinkets=trinket_list
+        bite_time=bite_time, bear_mangle=bool(bear_mangle),
+        trinkets=trinket_list
     )
     sim.set_active_debuffs(boss_debuffs)
     player.calc_damage_params(**sim.params)
