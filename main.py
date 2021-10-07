@@ -445,7 +445,7 @@ iteration_input = dbc.Col([
         }
     ),
     dbc.Input(
-        type='number', value=1000, id='num_replicates',
+        type='number', value=20000, id='num_replicates',
         style={
             'width': '50%', 'display': 'inline-block', 'marginBottom': '2.5%'
         }

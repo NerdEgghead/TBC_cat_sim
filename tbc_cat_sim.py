@@ -874,6 +874,10 @@ class Simulation():
             self.strategy['use_bite']
             and (self.strategy['min_combos_for_rip'] > 5)
         )
+        self.strategy['no_finisher'] = (
+            (not self.strategy['use_bite'])
+            and (self.strategy['min_combos_for_rip'] > 5)
+        )
 
     def set_active_debuffs(self, debuff_list):
         """Set active debuffs according to a specified list.
@@ -996,7 +1000,19 @@ class Simulation():
         energy, cp = self.player.energy, self.player.combo_points
         rip_cp = self.strategy['min_combos_for_rip']
         bite_cp = self.strategy['min_combos_for_bite']
+
+        # 10/6/21 - Added logic to not cast Rip if we're near the end of the
+        # fight.
+        end_thresh = 10
         rip_now = (cp >= rip_cp) and (not self.rip_debuff)
+        rip_now = rip_now and (self.fight_length - time >= end_thresh)
+        bite_at_end = ((cp >= bite_cp) and (
+            (self.fight_length - time < end_thresh)
+            or (self.rip_debuff and (
+                self.fight_length - self.rip_end < end_thresh))
+        ) and (not self.strategy['no_finisher'])
+        )
+
         mangle_now = (not rip_now) and (not self.mangle_debuff)
         bite_before_rip = (
             self.rip_debuff and self.strategy['use_bite']
@@ -1007,7 +1023,8 @@ class Simulation():
             and (cp >= bite_cp)
         )
         rip_next = (
-            rip_now or ((cp >= rip_cp) and (self.rip_end <= next_tick))
+            (rip_now or ((cp >= rip_cp) and (self.rip_end <= next_tick)))
+            and (self.fight_length - next_tick >= end_thresh)
         )
         mangle_next = (
             (not rip_next) and (mangle_now or (self.mangle_end <= next_tick))
@@ -1042,16 +1059,30 @@ class Simulation():
                 self.innervate_or_shift(time)
             elif (energy >= 40) or self.player.omen_proc:
                 return self.mangle(time)
-        elif bite_now:
+        elif bite_now or bite_at_end:
+            # Decision tree for Bite usage is more complicated, so there is
+            # some duplicated logic with the main tree.
+
+            # Shred versus Bite decision is the same as vanilla criteria
             if (energy >= 57) or ((energy >= 15) and self.player.omen_proc):
                 return self.player.shred()
             if energy >= 35:
                 return self.player.bite()
-            if ((energy >= 22)
-                    and (bite_before_rip and (not bite_before_rip_next))):
+
+            # If we are doing the Rip rotation with Bite filler, then there is
+            # a case where we would Bite now if we had enough energy, but once
+            # we gain enough energy to do so, it's too late to Bite relative to
+            # Rip falling off. In this case, we wait for the tick only if we
+            # can Shred or Mangle afterward, and otherwise shift and won't Bite
+            # at all this cycle. Returning 0.0 is the same thing as waiting for
+            # the next tick, so this logic could be written differently if
+            # desired to match the rest of the rotation code, where waiting for
+            # tick is handled implicitly instead.
+            if ((energy >= 22) and bite_before_rip
+                    and (not bite_before_rip_next)):
                 return 0.0
-            if ((energy >= 15)
-                    and ((not bite_before_rip) or bite_before_rip_next)):
+            if ((energy >= 15) and ((not bite_before_rip)
+                    or bite_before_rip_next or bite_at_end)):
                 return 0.0
             if (not rip_next) and ((energy < 20) or (not mangle_next)):
                 self.innervate_or_shift(time)
