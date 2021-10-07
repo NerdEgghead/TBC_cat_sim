@@ -338,6 +338,7 @@ buffs_1 = dbc.Col(
                       {'label': 'Omen of Clarity', 'value': 'omen'},
                       {'label': 'Bogling Root', 'value': 'bogling_root'},
                       {'label': 'Unleashed Rage', 'value': 'unleashed_rage'},
+                      {'label': 'Heroic Presence', 'value': 'heroic_presence'},
                       {
                           'label': 'Braided Eternium Chain',
                           'value': 'be_chain'
@@ -1123,7 +1124,10 @@ def create_buffed_player(
         raw_crit_unbuffed + buffed_agi / 20 + 3 * ('jotc' in stat_debuffs)
         + added_crit_rating / 22.1
     )
-    miss_chance = max(0., 9. - unbuffed_hit - 3 * ('imp_ff' in stat_debuffs))
+    miss_chance = max(
+        0., 9. - unbuffed_hit - 3 * ('imp_ff' in stat_debuffs)
+        - 1 * ('heroic_presence' in other_buffs)
+    )
     buffed_hit = (
         (9. - miss_chance)
         + min(6.5, np.floor(expertise_rating / 3.9425) * 0.25)
