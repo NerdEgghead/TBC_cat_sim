@@ -1020,13 +1020,12 @@ app.layout = html.Div([
 def process_trinkets(trinket_1, trinket_2, player, ap_mod, miss_chance):
     proc_trinkets = []
     all_trinkets = []
-    trinket_library = copy.deepcopy(trinkets.trinket_library)
 
     for trinket in [trinket_1, trinket_2]:
         if trinket == 'none':
             continue
 
-        trinket_params = trinket_library[trinket]
+        trinket_params = copy.deepcopy(trinkets.trinket_library[trinket])
 
         for stat, increment in trinket_params['passive_stats'].items():
             if stat == 'attack_power':
@@ -1045,7 +1044,18 @@ def process_trinkets(trinket_1, trinket_2, player, ap_mod, miss_chance):
             active_stats['stat_increment'] *= ap_mod
 
         if trinket_params['type'] == 'activated':
-            all_trinkets.append(trinkets.ActivatedTrinket(**active_stats))
+            # If this is the second trinket slot and the first trinket was also
+            # activated, then we need to enforce an activation delay due to the
+            # shared cooldown. For now we will assume that the shared cooldown
+            # is always equal to the duration of the first trinket's proc.
+            if all_trinkets and (not proc_trinkets):
+                delay = all_trinkets[-1].proc_duration
+            else:
+                delay = 0.0
+
+            all_trinkets.append(
+                trinkets.ActivatedTrinket(delay=delay, **active_stats)
+            )
         else:
             proc_type = active_stats.pop('proc_type')
 

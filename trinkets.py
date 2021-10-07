@@ -146,6 +146,50 @@ class ActivatedTrinket(Trinket):
     """Models an on-use trinket that is activated on cooldown as often as
     possible."""
 
+    def __init__(
+        self, stat_name, stat_increment, proc_name, proc_duration, cooldown,
+        delay=0.0
+    ):
+        """Initialize a generic activated trinket with key parameters.
+
+        Arguments:
+            stat_name (str): Name of the Player attribute that will be
+                modified by the trinket activation. Must be a valid attribute
+                of the Player class that can be modified. The one exception is
+                haste_rating, which is separately handled by the Simulation
+                object when updating timesteps for the sim.
+            stat_increment (float): Amount by which the Player attribute is
+                changed when the trinket is active.
+            proc_name (str): Name of the buff that is applied when the trinket
+                is active. Used for combat logging.
+            proc_duration (int): Duration of the buff, in seconds.
+            cooldown (int): Internal cooldown before the trinket can be
+                activated again.
+            delay (float): Optional time delay (in seconds) before the first
+                trinket activation in the fight. Can be used to enforce a
+                shared cooldown between two activated trinkets, or to delay the
+                activation for armor debuffs etc. Defaults to 0.0 .
+        """
+        self.delay = delay
+        Trinket.__init__(
+            self, stat_name, stat_increment, proc_name, proc_duration,
+            cooldown
+        )
+
+    def reset(self):
+        """Set trinket to fresh inactive state at the start of a fight."""
+        if self.delay:
+            # We put in a hack to set the "activation time" such that the
+            # trinket is ready after precisely the delay
+            self.activation_time = self.delay - self.cooldown
+        else:
+            # Otherwise, the initial activation time is set infinitely in the
+            # past so that the trinket is immediately ready for activation.
+            self.activation_time = -np.inf
+
+        self.active = False
+        self.can_proc = not self.delay
+
     def apply_proc(self):
         """Determine whether or not the trinket is activated at the current
         time.
@@ -167,7 +211,7 @@ class ProcTrinket(Trinket):
         self, stat_name, stat_increment, proc_name, chance_on_hit,
         proc_duration, cooldown, chance_on_crit=0.0, yellow_chance_on_hit=None
     ):
-        """Initialize a generic trinket with key parameters.
+        """Initialize a generic proc trinket with key parameters.
 
         Arguments:
             stat_name (str): Name of the Player attribute that will be
