@@ -15,13 +15,17 @@ class Trinket():
         """Initialize a generic trinket with key parameters.
 
         Arguments:
-            stat_name (str): Name of the Player attribute that will be
+            stat_name (str or list): Name of the Player attribute that will be
                 modified by the trinket activation. Must be a valid attribute
                 of the Player class that can be modified. The one exception is
                 haste_rating, which is separately handled by the Simulation
-                object when updating timesteps for the sim.
-            stat_increment (float): Amount by which the Player attribute is
-                changed when the trinket is active.
+                object when updating timesteps for the sim. A list of strings
+                can be provided instead, in which case every stat in the list
+                will be modified during the trinket activation.
+            stat_increment (float or np.ndarray): Amount by which the Player
+                attribute is changed when the trinket is active. If multiple
+                stat names are specified, then this must be a numpy array of
+                equal length to the number of stat names.
             proc_name (str): Name of the buff that is applied when the trinket
                 is active. Used for combat logging.
             proc_duration (int): Duration of the buff, in seconds.
@@ -50,15 +54,26 @@ class Trinket():
                 modified.
             sim (tbc_cat_sim.Simulation): Simulation object controlling the
                 fight execution.
-            increment (float): Quantity to add to the player's existing stat
-                value.
+            increment (float or np.ndarray): Quantity to add to the player's
+                existing stat value(s).
         """
+        # Convert stat name and stat increment to arrays if they are scalars
+        stat_names = np.atleast_1d(self.stat_name)
+        increments = np.atleast_1d(increment)
+
+        for index, stat_name in enumerate(stat_names):
+            self._modify_stat(time, player, sim, stat_name, increments[index])
+
+    def _modify_stat(self, time, player, sim, stat_name, increment):
+        """Contains the actual stat modification functionality for a single
+        stat. Called by the wrapper function, which handles potentially
+        iterating through multiple stats to be modified."""
         # Haste procs get handled separately from other raw stat buffs
-        if self.stat_name == 'haste_rating':
+        if stat_name == 'haste_rating':
             sim.apply_haste_buff(time, increment)
         else:
-            old_value = getattr(player, self.stat_name)
-            setattr(player, self.stat_name, old_value + increment)
+            old_value = getattr(player, stat_name)
+            setattr(player, stat_name, old_value + increment)
 
             # Recalculate damage parameters when player stats change
             player.calc_damage_params(**sim.params)
@@ -91,7 +106,7 @@ class Trinket():
         if sim.log:
             sim.combat_log.append(sim.gen_log(time, self.proc_name, 'applied'))
 
-    def deactivate(self, player, sim):
+    def deactivate(self, player, sim, time=None):
         """Deactivate the trinket buff when the duration has expired.
 
         Arguments:
@@ -99,16 +114,19 @@ class Trinket():
                 restored to their original values.
             sim (tbc_cat_sim.Simulation): Simulation object controlling the
                 fight execution.
+            time (float): Time at which the trinket is deactivated. Defaults to
+                the stored time for automatic deactivation.
         """
-        self.modify_stat(
-            self.deactivation_time, player, sim, -self.stat_increment
-        )
+        if time is None:
+            time = self.deactivation_time
+
+        self.modify_stat(time, player, sim, -self.stat_increment)
         self.active = False
 
         if sim.log:
-            sim.combat_log.append(sim.gen_log(
-                self.deactivation_time, self.proc_name, 'falls off'
-            ))
+            sim.combat_log.append(
+                sim.gen_log(time, self.proc_name, 'falls off')
+            )
 
     def update(self, time, player, sim):
         """Check for a trinket activation or deactivation at the specified
@@ -401,6 +419,30 @@ class BadgeOfTheSwarmguard(ProcTrinket):
                 )
 
 
+class RefreshingProcTrinket(ProcTrinket):
+    """Handles trinkets that can proc when already active to refresh the buff
+    duration."""
+
+    def activate(self, time, player, sim):
+        """Activate the trinket buff upon player usage or passive proc.
+
+        Arguments:
+            time (float): Simulation time, in seconds, of activation.
+            player (tbc_cat_sim.Player): Player object whose attributes will be
+                modified by the trinket proc.
+            sim (tbc_cat_sim.Simulation): Simulation object controlling the
+                fight execution.
+        """
+        # The only difference between a standard and repeating proc is that
+        # we want to make sure that the buff doesn't stack and merely
+        # refreshes. This is accomplished by deactivating the previous buff and
+        # then re-applying it.
+        if self.active:
+            self.deactivate(player, sim, time=time)
+
+        ProcTrinket.activate(self, time, player, sim)
+
+
 # Library of recognized TBC trinkets and associated parameters
 trinket_library = {
     'brooch': {
@@ -452,6 +494,31 @@ trinket_library = {
             'stat_increment': 260,
             'proc_name': 'Haste',
             'proc_duration': 10,
+            'cooldown': 120,
+        },
+    },
+    'kiss': {
+        'type': 'activated',
+        'passive_stats': {
+            'crit_chance': 14./22.1/100,
+            'miss_chance': -10./15.77/100,
+        },
+        'active_stats': {
+            'stat_name': 'haste_rating',
+            'stat_increment': 200,
+            'proc_name': 'Kiss of the Spider',
+            'proc_duration': 15,
+            'cooldown': 120,
+        },
+    },
+    'tenacity': {
+        'type': 'activated',
+        'passive_stats': {},
+        'active_stats': {
+            'stat_name': 'Agility',
+            'stat_increment': 150,
+            'proc_name': 'Heightened Reflexes',
+            'proc_duration': 20,
             'cooldown': 120,
         },
     },
@@ -508,6 +575,19 @@ trinket_library = {
             'stat_name': 'armor_pen',
             'proc_type': 'ppm',
             'proc_rate': 10.,
+        },
+    },
+    'class_trinket': {
+        'type': 'refreshing_proc',
+        'passive_stats': {},
+        'active_stats': {
+            'stat_name': 'Strength',
+            'stat_increment': 64,
+            'proc_name': 'Feline Blessing',
+            'proc_duration': 15,
+            'cooldown': 0,
+            'proc_type': 'chance_on_hit',
+            'proc_rate': 0.03,
         },
     },
     'motc': {

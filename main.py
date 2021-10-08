@@ -666,6 +666,12 @@ iteration_input = dbc.Col([
                 {'label': 'Icon of Unyielding Courage', 'value': 'icon'},
                 {'label': 'Abacus of Violent Odds', 'value': 'abacus'},
                 {'label': 'Badge of the Swarmguard', 'value': 'swarmguard'},
+                {'label': 'Kiss of the Spider', 'value': 'kiss'},
+                {'label': 'Badge of Tenacity', 'value': 'tenacity'},
+                {
+                    'label': 'Living Root of the Wildheart',
+                    'value': 'class_trinket',
+                },
             ],
             value='none'
         )),
@@ -683,6 +689,12 @@ iteration_input = dbc.Col([
                 {'label': 'Icon of Unyielding Courage', 'value': 'icon'},
                 {'label': 'Abacus of Violent Odds', 'value': 'abacus'},
                 {'label': 'Badge of the Swarmguard', 'value': 'swarmguard'},
+                {'label': 'Kiss of the Spider', 'value': 'kiss'},
+                {'label': 'Badge of Tenacity', 'value': 'tenacity'},
+                {
+                    'label': 'Living Root of the Wildheart',
+                    'value': 'class_trinket',
+                },
             ],
             value='none'
         )),
@@ -1019,7 +1031,9 @@ app.layout = html.Div([
 
 
 # Helper functions used in master callback
-def process_trinkets(trinket_1, trinket_2, player, ap_mod, miss_chance):
+def process_trinkets(
+    trinket_1, trinket_2, player, ap_mod, stat_mod, miss_chance
+):
     proc_trinkets = []
     all_trinkets = []
 
@@ -1044,6 +1058,16 @@ def process_trinkets(trinket_1, trinket_2, player, ap_mod, miss_chance):
 
         if active_stats['stat_name'] == 'attack_power':
             active_stats['stat_increment'] *= ap_mod
+        if active_stats['stat_name'] == 'Agility':
+            active_stats['stat_name'] = ['attack_power', 'crit_chance']
+            agi_increment = active_stats['stat_increment']
+            active_stats['stat_increment'] = np.array([
+                stat_mod * agi_increment * ap_mod,
+                stat_mod * agi_increment/25./100.
+            ])
+        if active_stats['stat_name'] == 'Strength':
+            active_stats['stat_name'] = 'attack_power'
+            active_stats['stat_increment'] *= 2 * stat_mod * ap_mod
 
         if trinket_params['type'] == 'activated':
             # If this is the second trinket slot and the first trinket was also
@@ -1061,7 +1085,11 @@ def process_trinkets(trinket_1, trinket_2, player, ap_mod, miss_chance):
         else:
             proc_type = active_stats.pop('proc_type')
 
-            if proc_type == 'chance_on_crit':
+            if proc_type == 'chance_on_hit':
+                proc_chance = active_stats.pop('proc_rate')
+                active_stats['chance_on_hit'] = proc_chance
+                active_stats['chance_on_crit'] = proc_chance
+            elif proc_type == 'chance_on_crit':
                 active_stats['chance_on_hit'] = 0.0
                 active_stats['chance_on_crit'] = active_stats.pop('proc_rate')
             elif proc_type == 'ppm':
@@ -1076,6 +1104,8 @@ def process_trinkets(trinket_1, trinket_2, player, ap_mod, miss_chance):
                     active_stats['chance_on_hit'],
                     active_stats['yellow_chance_on_hit']
                 )
+            elif trinket_params['type'] == 'refreshing_proc':
+                trinket_obj = trinkets.RefreshingProcTrinket(**active_stats)
             else:
                 trinket_obj = trinkets.ProcTrinket(**active_stats)
 
@@ -1186,7 +1216,7 @@ def create_buffed_player(
         pot='pot' in mana_consumes, cheap_pot=cheap_pots,
         shred_bonus=shred_bonus
     )
-    return player, ap_mod, miss_chance/100.
+    return player, ap_mod, stat_multiplier * 1.03, miss_chance/100.
 
 
 def run_sim(sim, num_replicates):
@@ -1431,7 +1461,7 @@ def compute(
     ctx = dash.callback_context
 
     # Create Player object based on specified stat inputs and talents
-    player, ap_mod, miss_chance = create_buffed_player(
+    player, ap_mod, stat_mod, miss_chance = create_buffed_player(
         unbuffed_strength, unbuffed_agi, unbuffed_int, unbuffed_spirit,
         unbuffed_ap, unbuffed_crit, unbuffed_hit, haste_rating,
         expertise_rating, armor_pen, weapon_damage, weapon_speed,
@@ -1443,7 +1473,7 @@ def compute(
 
     # Process trinkets
     trinket_list = process_trinkets(
-        trinket_1, trinket_2, player, ap_mod, miss_chance
+        trinket_1, trinket_2, player, ap_mod, stat_mod, miss_chance
     )
 
     # Default output is just the buffed player stats with no further calcs
