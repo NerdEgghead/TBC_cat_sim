@@ -78,6 +78,11 @@ class Trinket():
         self.modify_stat(time, player, sim, self.stat_increment)
         sim.proc_end_times.append(self.deactivation_time)
 
+        # In the case of a second trinket being used, the proc end time can
+        # sometimes be earlier than that of the first trinket, so the list of
+        # end times needs to be sorted.
+        sim.proc_end_times.sort()
+
         # Mark trinket as active
         self.active = True
         self.can_proc = False
@@ -256,7 +261,7 @@ class ProcTrinket(Trinket):
 
         Arguments:
             crit (bool): Whether the attack was a critical strike.
-            yellow (bool): Whether the attack was a special (ability) rather
+            yellow (bool): Whether the attack was a special ability rather
                 than a melee attack.
         """
         if not self.can_proc:
