@@ -284,6 +284,7 @@ class ProcTrinket(Trinket):
             proc_applied (bool): Whether or not the activation occurs.
         """
         if self.can_proc and self.proc_happened:
+            self.proc_happened = False
             return True
         return False
 
@@ -293,8 +294,109 @@ class ProcTrinket(Trinket):
         self.proc_happened = False
 
 
-# Library of recognized TBC trinkets and associated parameters
+class BadgeOfTheSwarmguard(ProcTrinket):
+    """Custom class to handle the unique behavior of stacking Badge procs."""
 
+    def __init__(self, white_chance_on_hit, yellow_chance_on_hit, *args):
+        """Initialize a Trinket object modeling Badge. Since Badge is a ppm
+        trinket, the user must pre-calculate the proc chances based on the
+        swing timer and equipped weapon speed.
+
+        Arguments:
+            white_chance_on_hit (float): Probability of a proc on a successful
+                normal hit, between 0 and 1.
+            yellow_chance_on_hit (float): Separate proc rate for special
+                abilities.
+        """
+        ProcTrinket.__init__(
+            self, stat_name='armor_pen', stat_increment=0,
+            proc_name='Badge of the Swarmguard', proc_duration=30,
+            cooldown=180., chance_on_hit=white_chance_on_hit,
+            yellow_chance_on_hit=yellow_chance_on_hit
+        )
+
+    def reset(self):
+        """Full reset of the trinket at the start of a fight."""
+        self.activation_time = -np.inf
+        self._reset()
+        self.stat_increment = 0
+
+    def _reset(self):
+        self.active = False
+
+        # For Badge, the can_proc attribute will be interpreted as signifying
+        # that the trinket has been used and there are less than 6 stacks.
+        # So on a reset we will set can_proc to False unlike other trinkets.
+        self.can_proc = False
+        self.proc_happened = False
+        self.num_stacks = 0
+        self.proc_name = 'Badge of the Swarmguard'
+
+    def deactivate(self, player, sim):
+        """Deactivate the trinket buff when the duration has expired.
+
+        Arguments:
+            player (tbc_cat_sim.Player): Player object whose attributes will be
+                restored to their original values.
+            sim (tbc_cat_sim.Simulation): Simulation object controlling the
+                fight execution.
+        """
+        # Temporarily change the stat increment to the total ArP gained while
+        # the trinket was active
+        self.stat_increment = 200 * self.num_stacks
+
+        # Reset trinket to inactive state
+        self._reset()
+        Trinket.deactivate(self, player, sim)
+        self.stat_increment = 0
+
+    def apply_proc(self):
+        """Determine whether a new trinket activation takes place, or whether
+        a new stack is applied to an existing activation."""
+        # If can_proc is True but the stat increment is 0, it means that the
+        # last event was a trinket deactivation, so we activate the trinket.
+        if (not self.active) and self.can_proc and (self.stat_increment == 0):
+            return True
+
+        # Ignore procs when at 6 stacks, and prevent future proc checks
+        if self.num_stacks == 6:
+            self.can_proc = False
+            return False
+
+        return ProcTrinket.apply_proc(self)
+
+    def activate(self, time, player, sim):
+        """Activate the trinket when off cooldown. If already active and a
+        trinket proc just occurred, then add a new stack of armor pen.
+
+        Arguments:
+            time (float): Simulation time, in seconds, of activation.
+            player (tbc_cat_sim.Player): Player object whose attributes will be
+                modified by the trinket proc.
+            sim (tbc_cat_sim.Simulation): Simulation object controlling the
+                fight execution.
+        """
+        if not self.active:
+            # Activate the trinket on a fresh use
+            Trinket.activate(self, time, player, sim)
+            self.can_proc = True
+            self.proc_name = 'Insight of the Qiraji'
+            self.stat_increment = 200
+        else:
+            # Apply a new ArP stack. We do this "manually" rather than in the
+            # parent method because a new stack doesn't count as an actual
+            # activation.
+            self.modify_stat(time, player, sim, self.stat_increment)
+            self.num_stacks += 1
+
+            # Log if requested
+            if sim.log:
+                sim.combat_log.append(
+                    sim.gen_log(time, self.proc_name, 'applied')
+                )
+
+
+# Library of recognized TBC trinkets and associated parameters
 trinket_library = {
     'brooch': {
         'type': 'activated',
@@ -392,6 +494,15 @@ trinket_library = {
             'cooldown': 20,
             'proc_type': 'ppm',
             'proc_rate': 1.,
+        },
+    },
+    'swarmguard': {
+        'type': 'proc',
+        'passive_stats': {},
+        'active_stats': {
+            'stat_name': 'armor_pen',
+            'proc_type': 'ppm',
+            'proc_rate': 10.,
         },
     },
     'motc': {
