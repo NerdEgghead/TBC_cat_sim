@@ -285,29 +285,6 @@ class Player():
             + 37. * (1./self.swing_timer + 2./5) - self.shift_cost/5
         )
 
-    def set_active_buffs(self, buff_list):
-        """Set active buffs according to a specified list.
-
-        Arguments:
-            buff_list (list): List of strings containing buff names. At
-                present, "omen" and "bogling_root" are supported.
-        """
-        all_buffs = ['omen', 'bogling_root']
-        active_buffs = copy.copy(buff_list)
-
-        for buff in all_buffs:
-            if buff in buff_list:
-                setattr(self, buff, True)
-                active_buffs.remove(buff)
-            else:
-                setattr(self, buff, False)
-
-        if active_buffs:
-            raise ValueError(
-                'Unsupported buffs found: %s. Supported buffs are: %s.' % (
-                    active_buffs, all_buffs)
-            )
-
     def calc_damage_params(
             self, gift_of_arthas, boss_armor, sunder, imp_EA, CoR, faerie_fire,
             annihilator, blood_frenzy, tigers_fury=False
@@ -825,6 +802,7 @@ class Simulation():
         'min_combos_for_bite': 4,
         'use_innervate': True,
         'bear_mangle': False,
+        'max_wait_time': 2.0,
     }
 
     def __init__(self, player, fight_length, num_mcp=0, trinkets=[], **kwargs):
@@ -1057,11 +1035,15 @@ class Simulation():
         elif rip_now:
             if (energy >= 30) or self.player.omen_proc:
                 self.rip(time)
+            elif time_to_next_tick > self.strategy['max_wait_time']:
+                self.innervate_or_shift(time)
         elif mangle_now:
             if (energy < 20) and (not rip_next):
                 self.innervate_or_shift(time)
             elif (energy >= 40) or self.player.omen_proc:
                 return self.mangle(time)
+            elif time_to_next_tick > self.strategy['max_wait_time']:
+                self.innervate_or_shift(time)
         elif bite_now or bite_at_end:
             # Decision tree for Bite usage is more complicated, so there is
             # some duplicated logic with the main tree.
@@ -1083,12 +1065,18 @@ class Simulation():
             # tick is handled implicitly instead.
             if ((energy >= 22) and bite_before_rip
                     and (not bite_before_rip_next)):
-                return 0.0
-            if ((energy >= 15) and
-                ((not bite_before_rip)
-                 or bite_before_rip_next or bite_at_end)):
-                return 0.0
-            if (not rip_next) and ((energy < 20) or (not mangle_next)):
+                wait = True
+            elif ((energy >= 15) and
+                    ((not bite_before_rip)
+                     or bite_before_rip_next or bite_at_end)):
+                wait = True
+            elif (not rip_next) and ((energy < 20) or (not mangle_next)):
+                wait = False
+                self.innervate_or_shift(time)
+            else:
+                wait = True
+
+            if wait and (time_to_next_tick > self.strategy['max_wait_time']):
                 self.innervate_or_shift(time)
         elif energy >= 22:
             if (energy >= 42) or self.player.omen_proc:
@@ -1096,7 +1084,11 @@ class Simulation():
             if ((energy >= 40) and (time_to_next_tick > 1.0)
                     and self.strategy['use_mangle_trick']):
                 return self.mangle(time)
+            if time_to_next_tick > self.strategy['max_wait_time']:
+                self.innervate_or_shift(time)
         elif (not rip_next) and ((energy < 20) or (not mangle_next)):
+            self.innervate_or_shift(time)
+        elif time_to_next_tick > self.strategy['max_wait_time']:
             self.innervate_or_shift(time)
 
         return 0.0

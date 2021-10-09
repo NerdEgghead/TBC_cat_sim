@@ -608,6 +608,19 @@ iteration_input = dbc.Col([
         ],
         style={'width': '60%'}
     ),
+    dbc.InputGroup(
+        [
+            dbc.InputGroupAddon('Wait at most:', addon_type='prepend'),
+            dbc.Input(
+                value=1.0, min=0.0, max=2.0, step=0.1, type='number',
+                id='max_wait_time',
+            ),
+            dbc.InputGroupAddon(
+                'seconds for an energy tick', addon_type='append'
+            )
+        ],
+        style={'width': '63%'}
+    ),
     html.Br(),
     dbc.Row([
         dbc.Col(dbc.Checklist(
@@ -672,6 +685,7 @@ iteration_input = dbc.Col([
                     'label': 'Living Root of the Wildheart',
                     'value': 'class_trinket',
                 },
+                {'label': 'Crystalforged Trinket', 'value': 'crystalforged'},
             ],
             value='none'
         )),
@@ -695,6 +709,7 @@ iteration_input = dbc.Col([
                     'label': 'Living Root of the Wildheart',
                     'value': 'class_trinket',
                 },
+                {'label': 'Crystalforged Trinket', 'value': 'crystalforged'},
             ],
             value='none'
         )),
@@ -1435,6 +1450,7 @@ def plot_new_trajectory(sim, show_whites):
     State('finisher', 'value'),
     State('rip_cp', 'value'),
     State('bite_cp', 'value'),
+    State('max_wait_time', 'value'),
     State('prepop_TF', 'value'),
     State('prepop_numticks', 'value'),
     State('use_mangle_trick', 'value'),
@@ -1454,9 +1470,9 @@ def compute(
         weapon_damage, mana_consumes, cheap_pots, ferocious_inspiration,
         bonuses, feral_aggression, savage_fury, naturalist,
         natural_shapeshifter, intensity, fight_length, boss_armor,
-        boss_debuffs, finisher, rip_cp, bite_cp, prepop_TF, prepop_numticks,
-        use_mangle_trick, use_innervate, use_bite, bite_time, bear_mangle,
-        num_replicates, calc_mana_weights, show_whites
+        boss_debuffs, finisher, rip_cp, bite_cp, max_wait_time, prepop_TF,
+        prepop_numticks, use_mangle_trick, use_innervate, use_bite, bite_time,
+        bear_mangle, num_replicates, calc_mana_weights, show_whites
 ):
     ctx = dash.callback_context
 
@@ -1498,7 +1514,7 @@ def compute(
         min_combos_for_bite=int(bite_cp), use_innervate=bool(use_innervate),
         use_mangle_trick=bool(use_mangle_trick), use_bite=bite,
         bite_time=bite_time, bear_mangle=bool(bear_mangle),
-        trinkets=trinket_list
+        trinkets=trinket_list, max_wait_time=max_wait_time
     )
     sim.set_active_debuffs(boss_debuffs)
     player.calc_damage_params(**sim.params)

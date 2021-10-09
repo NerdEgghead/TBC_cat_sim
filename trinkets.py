@@ -346,10 +346,6 @@ class BadgeOfTheSwarmguard(ProcTrinket):
 
     def _reset(self):
         self.active = False
-
-        # For Badge, the can_proc attribute will be interpreted as signifying
-        # that the trinket has been used and there are less than 6 stacks.
-        # So on a reset we will set can_proc to False unlike other trinkets.
         self.can_proc = False
         self.proc_happened = False
         self.num_stacks = 0
@@ -520,6 +516,19 @@ trinket_library = {
             'proc_name': 'Heightened Reflexes',
             'proc_duration': 20,
             'cooldown': 120,
+        },
+    },
+    'crystalforged': {
+        'type': 'activated',
+        'passive_stats': {
+            'bonus_damage': 7,
+        },
+        'active_stats': {
+            'stat_name': 'attack_power',
+            'stat_increment': 216,
+            'proc_name': 'Valor',
+            'proc_duration': 10,
+            'cooldown': 60,
         },
     },
     'hourglass': {
