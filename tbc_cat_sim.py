@@ -262,7 +262,11 @@ class Player():
         """
         # Mana regen is still linear in Spirit for TBC, but the scaling
         # coefficient is now Int-dependent.
-        self.regen_factor = 0.009327 * np.sqrt(self.intellect) * 2
+        # 10/11/21 - Edited base_regen parameter from 0.009327 to 0.0085 while
+        # shapeshifted, based on the average of three measurements by Rokpaus.
+        # Neither number fits the caster/cat data exactly, so the formula is
+        # likely not exact.
+        self.regen_factor = 0.0085 * np.sqrt(self.intellect) * 2
         base_regen = self.spirit * self.regen_factor
         bonus_regen = self.mp5 / 5 * 2
 
