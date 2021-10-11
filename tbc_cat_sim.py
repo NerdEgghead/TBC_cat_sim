@@ -6,6 +6,7 @@ import collections
 import urllib
 import multiprocessing
 import psutil
+import trinkets as trinks
 
 
 def calc_white_damage(low_end, high_end, miss_chance, crit_chance):
@@ -820,7 +821,10 @@ class Simulation():
         'max_wait_time': 2.0,
     }
 
-    def __init__(self, player, fight_length, num_mcp=0, trinkets=[], **kwargs):
+    def __init__(
+        self, player, fight_length, num_mcp=0, trinkets=[], haste_pot=False,
+        **kwargs
+    ):
         """Initialize simulation.
 
         Arguments:
@@ -833,6 +837,8 @@ class Simulation():
                 once the haste buff expires. Defaults to 0.
             trinkets (list of trinkets.Trinket): List of ActivatedTrinket or
                 ProcTrinket objects that will be used on cooldown.
+            haste_pot (bool): Whether Haste Potions will be used on cooldown in
+                the encounter. Defaults False.
             kwargs (dict): Key, value pairs for all other encounter parameters,
                 including boss armor, relevant debuffs, and player stregy
                 specification. An error will be thrown if the parameter is not
@@ -872,6 +878,13 @@ class Simulation():
             (not self.strategy['use_bite'])
             and (self.strategy['min_combos_for_rip'] > 5)
         )
+
+        # Set up Haste Potion usage if requested
+        if haste_pot:
+            self.haste_pot = trinks.HastePotion()
+            self.trinkets.append(self.haste_pot)
+        else:
+            self.haste_pot = None
 
     def set_active_debuffs(self, debuff_list):
         """Set active debuffs according to a specified list.
@@ -936,6 +949,10 @@ class Simulation():
             )
         else:
             self.player.shift(time)
+
+            # Manually activate Haste Potion if off cooldown
+            if (self.haste_pot is not None) and self.haste_pot.apply_proc():
+                self.haste_pot.activate(time, self.player, self)
 
         # If needed, squeeze in a weapon swap into the same GCD
         if (not self.mcp_equipped) and (self.num_mcp >= 1):

@@ -281,33 +281,28 @@ buffs_1 = dbc.Col(
                   {'label': 'Scroll of Agility V', 'value': 'scroll_agi'},
                   {'label': 'Scroll of Strength V', 'value': 'scroll_str'},
                   {'label': 'Consecrated Sharpening Stone', 'value': 'consec'},
-                  {'label': 'Adamantite Weightstone', 'value': 'weightstone'}],
+                  {'label': 'Adamantite Weightstone', 'value': 'weightstone'},
+                  {'label': 'Dark / Demonic Rune', 'value': 'rune'}],
          value=[
-             'agi_elixir', 'food', 'scroll_agi', 'scroll_str', 'weightstone'
+             'agi_elixir', 'food', 'scroll_agi', 'scroll_str', 'weightstone',
+             'rune'
          ],
          id='consumables'
      ),
-     dbc.Row(
-         [dbc.Col(dbc.Checklist(
-             options=[{'label': 'Mana Potion', 'value': 'pot'},
-                      {'label': 'Dark / Demonic Rune', 'value': 'rune'}],
-             value=['pot', 'rune'], id='mana_consumes',
-          ), width='auto'),
-          dbc.Col(
-                dbc.FormGroup(
-                    [
-                        dbc.Checkbox(
-                            id='cheap_pots', className='form-check-input'
-                        ),
-                        dbc.Label(
-                            'use cheap pots', html_for='cheap_pots',
-                            className='form-check-label'
-                        )
-                    ],
-                    check=True
-                ),
-                width='auto'
-          )],
+     dbc.InputGroup(
+         [
+             dbc.InputGroupAddon('Potion CD:', addon_type='prepend'),
+             dbc.Select(
+                 options=[
+                     {'label': 'Super Mana Potion', 'value': 'super'},
+                     {'label': 'Fel Mana Potion', 'value': 'fel'},
+                     {'label': 'Haste Potion', 'value': 'haste'},
+                     {'label': 'None', 'value': 'none'},
+                 ],
+                 value='super', id='potion',
+             ),
+         ],
+         style={'width': '50%', 'marginTop': '1.5%'}
      ),
      html.Br(),
      html.H5('Raid Buffs'),
@@ -367,6 +362,10 @@ buffs_1 = dbc.Col(
 
 encounter_details = dbc.Col(
     [html.H5('Idols and Set Bonuses'),
+     dbc.Checklist(
+         options=[{'label': 'Idol of the Raven Goddess', 'value': 'raven'}],
+         value=[], id='raven_idol'
+     ),
      dbc.Checklist(
          options=[{'label': 'Everbloom Idol', 'value': 'everbloom'},
                   {'label': '2-piece Tier 4 bonus', 'value': 't4_bonus'},
@@ -608,7 +607,7 @@ iteration_input = dbc.Col([
                 value=4, id='bite_cp',
             ),
         ],
-        style={'width': '60%'}
+        style={'width': '60%', 'marginBottom': '1.5%'}
     ),
     dbc.InputGroup(
         [
@@ -1142,7 +1141,7 @@ def create_buffed_player(
         unbuffed_mana, unbuffed_mp5, consumables, raid_buffs, num_mcp,
         other_buffs, stat_debuffs, surv_agi, feral_aggression, savage_fury,
         naturalist, natural_shapeshifter, ferocious_inspiration, intensity,
-        mana_consumes, cheap_pots, bonuses
+        potion, bonuses, raven_idol
 ):
     """Compute fully raid buffed stats based on specified raid buffs, and
     instantiate a Player object with those stats."""
@@ -1193,6 +1192,7 @@ def create_buffed_player(
         20 * ('agi_elixir' in consumables)
         + 14 * ('weightstone' in consumables)
         + 28 * ('be_chain' in other_buffs)
+        + 20 * bool(raven_idol)
     )
     buffed_crit = (
         raw_crit_unbuffed + buffed_agi / 25 + 3 * ('jotc' in stat_debuffs)
@@ -1232,8 +1232,8 @@ def create_buffed_player(
         bonus_damage=bonus_weapon_damage, multiplier=damage_multiplier,
         jow='jow' in stat_debuffs, armor_pen=armor_pen,
         t4_bonus='t4_bonus' in bonuses, t6_2p='t6_2p' in bonuses,
-        t6_4p='t6_4p' in bonuses, rune='rune' in mana_consumes,
-        pot='pot' in mana_consumes, cheap_pot=cheap_pots,
+        t6_4p='t6_4p' in bonuses, rune='rune' in consumables,
+        pot=potion in ['super', 'fel'], cheap_pot=(potion == 'super'),
         shred_bonus=shred_bonus
     )
     return player, ap_mod, stat_multiplier * 1.03, miss_chance/100.
@@ -1432,6 +1432,7 @@ def plot_new_trajectory(sim, show_whites):
     Input('raid_buffs', 'value'),
     Input('num_mcp', 'value'),
     Input('other_buffs', 'value'),
+    Input('raven_idol', 'value'),
     Input('stat_debuffs', 'value'),
     Input('surv_agi', 'value'),
     Input('trinket_1', 'value'),
@@ -1440,8 +1441,7 @@ def plot_new_trajectory(sim, show_whites):
     Input('weight_button', 'n_clicks'),
     Input('graph_button', 'n_clicks'),
     State('weapon_damage', 'value'),
-    State('mana_consumes', 'value'),
-    State('cheap_pots', 'checked'),
+    State('potion', 'value'),
     State('ferocious_inspiration', 'value'),
     State('bonuses', 'value'),
     State('feral_aggression', 'value'),
@@ -1470,11 +1470,11 @@ def compute(
         unbuffed_strength, unbuffed_agi, unbuffed_int, unbuffed_spirit,
         unbuffed_ap, unbuffed_crit, unbuffed_hit, haste_rating, armor_pen,
         expertise_rating, weapon_speed, unbuffed_mana, unbuffed_mp5,
-        consumables, raid_buffs, num_mcp, other_buffs, stat_debuffs, surv_agi,
-        trinket_1, trinket_2, run_clicks, weight_clicks, graph_clicks,
-        weapon_damage, mana_consumes, cheap_pots, ferocious_inspiration,
-        bonuses, feral_aggression, savage_fury, naturalist,
-        natural_shapeshifter, intensity, fight_length, boss_armor,
+        consumables, raid_buffs, num_mcp, other_buffs, raven_idol,
+        stat_debuffs, surv_agi, trinket_1, trinket_2, run_clicks,
+        weight_clicks, graph_clicks, weapon_damage, potion,
+        ferocious_inspiration, bonuses, feral_aggression, savage_fury,
+        naturalist, natural_shapeshifter, intensity, fight_length, boss_armor,
         boss_debuffs, finisher, rip_cp, bite_cp, max_wait_time, prepop_TF,
         prepop_numticks, use_mangle_trick, use_innervate, use_bite, bite_time,
         bear_mangle, num_replicates, calc_mana_weights, show_whites
@@ -1489,7 +1489,7 @@ def compute(
         unbuffed_mana, unbuffed_mp5, consumables, raid_buffs, num_mcp,
         other_buffs, stat_debuffs, surv_agi, feral_aggression, savage_fury,
         naturalist, natural_shapeshifter, ferocious_inspiration, intensity,
-        mana_consumes, cheap_pots, bonuses
+        potion, bonuses, raven_idol
     )
 
     # Process trinkets
@@ -1519,7 +1519,8 @@ def compute(
         min_combos_for_bite=int(bite_cp), use_innervate=bool(use_innervate),
         use_mangle_trick=bool(use_mangle_trick), use_bite=bite,
         bite_time=bite_time, bear_mangle=bool(bear_mangle),
-        trinkets=trinket_list, max_wait_time=max_wait_time
+        trinkets=trinket_list, max_wait_time=max_wait_time,
+        haste_pot=(potion == 'haste')
     )
     sim.set_active_debuffs(boss_debuffs)
     player.calc_damage_params(**sim.params)

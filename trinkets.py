@@ -128,7 +128,7 @@ class Trinket():
                 sim.gen_log(time, self.proc_name, 'falls off')
             )
 
-    def update(self, time, player, sim):
+    def update(self, time, player, sim, allow_activation=True):
         """Check for a trinket activation or deactivation at the specified
         simulation time, and perform associated bookkeeping.
 
@@ -138,6 +138,10 @@ class Trinket():
                 modified by the trinket proc.
             sim (tbc_cat_sim.Simulation): Simulation object controlling the
                 fight execution.
+            allow_activation (bool): Allow the trinket to be activated
+                automatically if the appropriate conditions are met. Defaults
+                True, but can be set False if the user wants to control
+                trinket activations manually.
         """
         # First check if an existing buff has fallen off
         if self.active and (time > self.deactivation_time - 1e-9):
@@ -149,7 +153,7 @@ class Trinket():
             self.can_proc = True
 
         # Now decide whether a proc actually happens
-        if self.apply_proc():
+        if allow_activation and self.apply_proc():
             self.activate(time, player, sim)
 
     def apply_proc(self):
@@ -225,6 +229,40 @@ class ActivatedTrinket(Trinket):
         if self.can_proc:
             return True
         return False
+
+
+class HastePotion(ActivatedTrinket):
+    """Haste pots can be easily modeled within the same trinket class structure
+    without the need for custom code."""
+
+    def __init__(self, delay=0.0):
+        """Initialize object at the start of a fight.
+
+        Arguments:
+            delay (float): Minimum elapsed time in the fight before the potion
+                can be used. Can be used to delay the potion activation for
+                armor debuffs going up, etc. Note that the potion will *not* be
+                actually activated at the delay time, only on the subsequent
+                powershift. Defaults to 0.0
+        """
+        ActivatedTrinket.__init__(
+            self, 'haste_rating', 400, 'Haste Potion', 15, 120, delay=delay
+        )
+
+    def update(self, time, player, sim):
+        """Check for possible deactivation of the haste buff, or if the potion
+        has come off cooldown.
+
+        Arguments:
+            time (float): Simulation time, in seconds.
+            player (tbc_cat_sim.Player): Player object executing the DPS
+                rotation.
+            sim (tbc_cat_sim.Simulation): Simulation object controlling the
+                fight execution.
+        """
+        ActivatedTrinket.update(
+            self, time, player, sim, allow_activation=False
+        )
 
 
 class ProcTrinket(Trinket):
