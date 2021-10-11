@@ -688,6 +688,7 @@ iteration_input = dbc.Col([
                     'value': 'class_trinket',
                 },
                 {'label': 'Crystalforged Trinket', 'value': 'crystalforged'},
+                {'label': 'Madness of the Betrayer', 'value': 'madness'},
             ],
             value='none'
         )),
@@ -712,6 +713,7 @@ iteration_input = dbc.Col([
                     'value': 'class_trinket',
                 },
                 {'label': 'Crystalforged Trinket', 'value': 'crystalforged'},
+                {'label': 'Madness of the Betrayer', 'value': 'madness'},
             ],
             value='none'
         )),

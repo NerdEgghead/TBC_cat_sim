@@ -599,6 +599,22 @@ trinket_library = {
             'proc_rate': 0.03,
         },
     },
+    'madness': {
+        'type': 'refreshing_proc',
+        'passive_stats': {
+            'miss_chance': -20./15.77/100,
+            'attack_power': 84,
+        },
+        'active_stats': {
+            'stat_name': 'armor_pen',
+            'stat_increment': 300,
+            'proc_name': 'Forceful Strike',
+            'proc_duration': 10,
+            'cooldown': 0,
+            'proc_type': 'ppm',
+            'proc_rate': 1.,
+        },
+    },
     'motc': {
         'type': 'passive',
         'passive_stats': {
