@@ -165,10 +165,11 @@ class Player():
     def __init__(
             self, attack_power, hit_chance, crit_chance, armor_pen,
             swing_timer, mana, intellect, spirit, mp5, jow=False, pot=True,
-            cheap_pot=False, rune=True, t4_bonus=False, bonus_damage=0,
-            shred_bonus=0, multiplier=1.1, omen=True, feral_aggression=0,
-            savage_fury=2, natural_shapeshifter=3, intensity=3,
-            weapon_speed=3.0, proc_trinkets=[], log=False
+            cheap_pot=False, rune=True, t4_bonus=False, t6_2p=False,
+            t6_4p=False, bonus_damage=0, shred_bonus=0, multiplier=1.1,
+            omen=True, feral_aggression=0, savage_fury=2,
+            natural_shapeshifter=3, intensity=3, weapon_speed=3.0,
+            proc_trinkets=[], log=False
     ):
         """Initialize player with key damage parameters.
 
@@ -193,6 +194,10 @@ class Player():
                 instead of the optimal Fel Mana Potion. Defaults False.
             rune (bool): Whether Dark/Demonic Runes are used. Defaults True.
             t4_bonus (bool): Whether the 2-piece T4 set bonus is used. Defaults
+                False.
+            t6_2p (bool): Whether the 2-piece T6 set bonus is used. Defaults
+                False.
+            t6_4p (bool): Whether the 4-piece T6 set bonus is used. Defaults
                 False.
             bonus_damage (int): Bonus weapon damage from buffs such as Bogling
                 Root or Dense Weightstone. Defaults to 0.
@@ -233,6 +238,8 @@ class Player():
         self.t4_bonus = t4_bonus
         self.bonus_damage = bonus_damage
         self.shred_bonus = shred_bonus
+        self.mangle_cost = 40 - 5 * t6_2p
+        self.t6_bonus = t6_4p
         self.damage_multiplier = multiplier
         self.omen = omen
         self.feral_aggression = feral_aggression
@@ -311,7 +318,10 @@ class Player():
         self.shred_high = (
             self.white_high * 2.25 + (405 + self.shred_bonus) * self.multiplier
         )
-        self.bite_multiplier = self.multiplier * (1+0.03*self.feral_aggression)
+        self.bite_multiplier = (
+            self.multiplier * (1 + 0.03 * self.feral_aggression)
+            * (1 + 0.15 * self.t6_bonus)
+        )
         self.bite_low = {
             5: (935 + 0.25 * self.attack_power) * self.bite_multiplier,
             4: (766 + 0.2 * self.attack_power) * self.bite_multiplier
@@ -329,9 +339,10 @@ class Player():
         self.mangle_high = mangle_fac * (
             self.white_high * 1.6 + 264 * self.multiplier
         )
+        rip_multiplier = damage_multiplier * (1 + 0.15 * self.t6_bonus)
         self.rip_tick = {
-            5: (1092 + 0.24*self.attack_power) / 6 * damage_multiplier,
-            4: (894 + 0.24*self.attack_power) / 6 * damage_multiplier
+            5: (1092 + 0.24*self.attack_power) / 6 * rip_multiplier,
+            4: (894 + 0.24*self.attack_power) / 6 * rip_multiplier
         }
 
         # Adjust damage values for Gift of Arthas
@@ -638,7 +649,7 @@ class Player():
             success (bool): Whether the Mangle debuff was successfully applied.
         """
         return self.execute_builder(
-            'Mangle', self.mangle_low, self.mangle_high, 40
+            'Mangle', self.mangle_low, self.mangle_high, self.mangle_cost
         )
 
     def bite(self):
@@ -995,6 +1006,7 @@ class Simulation():
         )
 
         mangle_now = (not rip_now) and (not self.mangle_debuff)
+        mangle_cost = self.player.mangle_cost
         bite_before_rip = (
             self.rip_debuff and self.strategy['use_bite']
             and (self.rip_end - time >= self.strategy['bite_time'])
@@ -1024,7 +1036,8 @@ class Simulation():
             # No-shift rotation
             if (rip_now and ((energy >= 30) or self.player.omen_proc)):
                 self.rip(time)
-            elif (mangle_now and ((energy >= 40) or self.player.omen_proc)):
+            elif (mangle_now and
+                  ((energy >= mangle_cost) or self.player.omen_proc)):
                 return self.mangle(time)
             elif (bite_now and ((energy >= 35) or self.player.omen_proc)):
                 return self.player.bite()
@@ -1038,9 +1051,9 @@ class Simulation():
             elif time_to_next_tick > self.strategy['max_wait_time']:
                 self.innervate_or_shift(time)
         elif mangle_now:
-            if (energy < 20) and (not rip_next):
+            if (energy < mangle_cost - 20) and (not rip_next):
                 self.innervate_or_shift(time)
-            elif (energy >= 40) or self.player.omen_proc:
+            elif (energy >= mangle_cost) or self.player.omen_proc:
                 return self.mangle(time)
             elif time_to_next_tick > self.strategy['max_wait_time']:
                 self.innervate_or_shift(time)
@@ -1081,12 +1094,13 @@ class Simulation():
         elif energy >= 22:
             if (energy >= 42) or self.player.omen_proc:
                 return self.player.shred()
-            if ((energy >= 40) and (time_to_next_tick > 1.0)
+            if ((energy >= mangle_cost) and (time_to_next_tick > 1.0)
                     and self.strategy['use_mangle_trick']):
                 return self.mangle(time)
             if time_to_next_tick > self.strategy['max_wait_time']:
                 self.innervate_or_shift(time)
-        elif (not rip_next) and ((energy < 20) or (not mangle_next)):
+        elif ((not rip_next) and
+              ((energy < mangle_cost - 20) or (not mangle_next))):
             self.innervate_or_shift(time)
         elif time_to_next_tick > self.strategy['max_wait_time']:
             self.innervate_or_shift(time)

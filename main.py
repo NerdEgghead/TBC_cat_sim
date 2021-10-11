@@ -370,7 +370,9 @@ encounter_details = dbc.Col(
      dbc.Checklist(
          options=[{'label': 'Everbloom Idol', 'value': 'everbloom'},
                   {'label': '2-piece Tier 4 bonus', 'value': 't4_bonus'},
-                  {'label': '4-piece Tier 5 bonus', 'value': 't5_bonus'}],
+                  {'label': '4-piece Tier 5 bonus', 'value': 't5_bonus'},
+                  {'label': '2-piece Tier 6 bonus', 'value': 't6_2p'},
+                  {'label': '4-piece Tier 6 bonus', 'value': 't6_4p'}],
          value=['everbloom', 't4_bonus'],
          id='bonuses'
      ),
@@ -1227,7 +1229,8 @@ def create_buffed_player(
         intensity=int(intensity), weapon_speed=weapon_speed,
         bonus_damage=bonus_weapon_damage, multiplier=damage_multiplier,
         jow='jow' in stat_debuffs, armor_pen=armor_pen,
-        t4_bonus='t4_bonus' in bonuses, rune='rune' in mana_consumes,
+        t4_bonus='t4_bonus' in bonuses, t6_2p='t6_2p' in bonuses,
+        t6_4p='t6_4p' in bonuses, rune='rune' in mana_consumes,
         pot='pot' in mana_consumes, cheap_pot=cheap_pots,
         shred_bonus=shred_bonus
     )
