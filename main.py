@@ -1153,12 +1153,12 @@ def create_buffed_player(
 
     # Determine "raw" AP, crit, and mana not from Str/Agi/Int
     raw_ap_unbuffed = unbuffed_ap / 1.1 - 2 * unbuffed_strength - unbuffed_agi
-    raw_crit_unbuffed = unbuffed_crit - unbuffed_agi / 20
+    raw_crit_unbuffed = unbuffed_crit - unbuffed_agi / 25
     raw_mana_unbuffed = unbuffed_mana - 15 * unbuffed_int
 
     # Augment all base stats based on specified buffs
     stat_multiplier = 1 + 0.1 * ('kings' in raid_buffs)
-    added_stats = 16.2 * ('motw' in raid_buffs)
+    added_stats = 18.9 * ('motw' in raid_buffs)
 
     buffed_strength = stat_multiplier * (unbuffed_strength + 1.03 * (
         added_stats + 88.55 * ('str_totem' in raid_buffs)
@@ -1170,10 +1170,10 @@ def create_buffed_player(
         + 20 * ('scroll_agi' in consumables)
     ))
     buffed_int = stat_multiplier * (
-        unbuffed_int + 1.2 * 1.03 * (added_stats + 31 * ('ai' in raid_buffs))
+        unbuffed_int + 1.2 * 1.03 * (added_stats + 40 * ('ai' in raid_buffs))
     )
     buffed_spirit = stat_multiplier * (unbuffed_spirit + 1.03 * (
-        added_stats + 40 * ('spirit' in raid_buffs)
+        added_stats + 50 * ('spirit' in raid_buffs)
         + 20 * ('food' in consumables)
     ))
 
@@ -1193,7 +1193,7 @@ def create_buffed_player(
         + 28 * ('be_chain' in other_buffs)
     )
     buffed_crit = (
-        raw_crit_unbuffed + buffed_agi / 20 + 3 * ('jotc' in stat_debuffs)
+        raw_crit_unbuffed + buffed_agi / 25 + 3 * ('jotc' in stat_debuffs)
         + added_crit_rating / 22.1
     )
     miss_chance = max(
