@@ -330,6 +330,7 @@ buffs_1 = dbc.Col(
          [dbc.Col(dbc.Checklist(
              options=[{'label': 'Manual Crowd Pummeler - Maximum uses:',
                        'value': 'mcp'},
+                      {'label': 'Bloodlust', 'value': 'lust'},
                       {'label': 'Omen of Clarity', 'value': 'omen'},
                       {'label': 'Bogling Root', 'value': 'bogling_root'},
                       {'label': 'Unleashed Rage', 'value': 'unleashed_rage'},
@@ -1511,6 +1512,9 @@ def compute(
     max_mcp = num_mcp if 'mcp' in other_buffs else 0
     bite = (bool(use_bite) and (finisher == 'rip')) or (finisher == 'bite')
     rip_combos = 6 if finisher != 'rip' else int(rip_cp)
+
+    if 'lust' in other_buffs:
+        trinket_list.append(trinkets.Bloodlust())
 
     sim = ccs.Simulation(
         player, fight_length + 1e-9, num_mcp=max_mcp,

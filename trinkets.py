@@ -1,6 +1,7 @@
 """Code for modeling non-static trinkets in feral DPS simulation."""
 
 import numpy as np
+import tbc_cat_sim as ccs
 
 
 class Trinket():
@@ -263,6 +264,44 @@ class HastePotion(ActivatedTrinket):
         ActivatedTrinket.update(
             self, time, player, sim, allow_activation=False
         )
+
+
+class Bloodlust(ActivatedTrinket):
+    """Similar to haste pots, the trinket framework works perfectly for Lust as
+    well, just that the percentage haste buff is handled a bit differently."""
+
+    def __init__(self, delay=0.0):
+        """Initialize object at the start of a fight.
+
+        Arguments:
+            delay (float): Minimum elapsed time in the fight before Lust is
+                used. Can be used to delay lusting for armor debuffs going up,
+                etc. Defaults to 0.0
+        """
+        ActivatedTrinket.__init__(
+            self, None, 0.0, 'Bloodlust', 40, 600, delay=delay
+        )
+
+    def modify_stat(self, time, player, sim, *args):
+        """Change swing timer when Bloodlust is applied or falls off.
+
+        Arguments:
+            time (float): Simulation time, in seconds, of activation.
+            player (tbc_cat_sim.Player): Player object whose attributes will be
+                modified.
+            sim (tbc_cat_sim.Simulation): Simulation object controlling the
+                fight execution.
+        """
+        old_multiplier = 1.3 if self.active else 1.0
+        haste_rating = ccs.calc_haste_rating(
+            sim.swing_timer, multiplier=old_multiplier
+        )
+        new_multiplier = 1.0 if self.active else 1.3
+        new_swing_timer = ccs.calc_swing_timer(
+            haste_rating, multiplier=new_multiplier
+        )
+        sim.update_swing_times(time, new_swing_timer)
+        sim.haste_multiplier = new_multiplier
 
 
 class ProcTrinket(Trinket):

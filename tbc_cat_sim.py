@@ -86,7 +86,7 @@ def piecewise_eval(t_fine, times, values):
     return result
 
 
-def calc_swing_timer(haste_rating):
+def calc_swing_timer(haste_rating, multiplier=1.0):
     """Calculate cat swing timer given a total haste rating stat.
 
     Arguments:
@@ -94,20 +94,24 @@ def calc_swing_timer(haste_rating):
 
     Returns:
         swing_timer (float): Hasted swing timer in seconds.
+        multiplier (float): Overall haste multiplier from multiplicative haste
+            buffs such as Bloodlust. Defaults to 1.
     """
-    return 1.0 / (1 + haste_rating / 1577)
+    return 1.0 / (multiplier * (1 + haste_rating / 1577))
 
 
-def calc_haste_rating(swing_timer):
+def calc_haste_rating(swing_timer, multiplier=1.0):
     """Calculate the haste rating that is consistent with a given swing timer.
 
     Arguments:
         swing_timer (float): Hasted swing timer in seconds.
+        multiplier (float): Overall haste multiplier from multiplicative haste
+            buffs such as Bloodlust. Defaults to 1.
 
     Returns:
         haste_rating (float): Unrounded haste rating.
     """
-    return 1577 * (1 / swing_timer - 1)
+    return 1577 * (1 / (swing_timer * multiplier) - 1)
 
 
 def gen_import_link(stat_weights, EP_name='Simmed Weights', multiplier=1.133):
@@ -886,6 +890,10 @@ class Simulation():
         else:
             self.haste_pot = None
 
+        # Set multiplicative haste buffs to 0. The multiplier can be increased
+        # during Bloodlust, etc.
+        self.haste_multiplier = 1.0
+
     def set_active_debuffs(self, debuff_list):
         """Set active debuffs according to a specified list.
 
@@ -1169,7 +1177,10 @@ class Simulation():
                 Rating changes.
         """
         new_swing_timer = calc_swing_timer(
-            calc_haste_rating(self.swing_timer) + haste_rating_increment
+            calc_haste_rating(
+                self.swing_timer, multiplier=self.haste_multiplier
+            ) + haste_rating_increment,
+            multiplier=self.haste_multiplier
         )
         self.update_swing_times(time, new_swing_timer)
 
