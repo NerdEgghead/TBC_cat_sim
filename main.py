@@ -31,7 +31,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=202, id='unbuffed_strength',
+            type='number', value=336, id='unbuffed_strength',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -47,7 +47,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=543, id='unbuffed_agi',
+            type='number', value=536, id='unbuffed_agi',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -63,7 +63,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=192, id='unbuffed_int',
+            type='number', value=233, id='unbuffed_int',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -79,7 +79,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            value=161, type='number', id='unbuffed_spirit',
+            value=153, type='number', id='unbuffed_spirit',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -96,7 +96,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=2912, id='unbuffed_attack_power',
+            type='number', value=3070, id='unbuffed_attack_power',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -128,7 +128,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=37.49, id='unbuffed_crit',
+            type='number', value=36.48, id='unbuffed_crit',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -152,7 +152,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=6.34, id='unbuffed_hit',
+            type='number', value=5.45, id='unbuffed_hit',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -208,7 +208,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=20, id='expertise_rating',
+            type='number', value=45, id='expertise_rating',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -248,7 +248,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            value=4970, type='number', id='unbuffed_mana',
+            value=5585, type='number', id='unbuffed_mana',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -373,7 +373,7 @@ encounter_details = dbc.Col(
                   {'label': '4-piece Tier 5 bonus', 'value': 't5_bonus'},
                   {'label': '2-piece Tier 6 bonus', 'value': 't6_2p'},
                   {'label': '4-piece Tier 6 bonus', 'value': 't6_4p'}],
-         value=['everbloom', 't4_bonus'],
+         value=['everbloom', 't5_bonus'],
          id='bonuses'
      ),
      html.Br(),
@@ -605,7 +605,7 @@ iteration_input = dbc.Col([
                     {'label': '4', 'value': 4},
                     {'label': '5', 'value': 5},
                 ],
-                value=4, id='bite_cp',
+                value=5, id='bite_cp',
             ),
         ],
         style={'width': '60%', 'marginBottom': '1.5%'}
@@ -648,11 +648,11 @@ iteration_input = dbc.Col([
     dbc.Row([
         dbc.Col(dbc.Checklist(
             options=[{'label': " use Ferocious Bite with", 'value': 'bite'}],
-            value=[], id='use_bite',
+            value=['bite'], id='use_bite',
         ), width='auto'),
         dbc.Col('with', width='auto'),
         dbc.Col(dbc.Input(
-            type='number', value=4, id='bite_time', min=0.0, step=0.1,
+            type='number', value=0, id='bite_time', min=0.0, step=0.1,
             style={'marginTop': '-7%', 'width': '40%'},
         ), width='auto'),
         dbc.Col(
@@ -690,7 +690,7 @@ iteration_input = dbc.Col([
                 {'label': 'Crystalforged Trinket', 'value': 'crystalforged'},
                 {'label': 'Madness of the Betrayer', 'value': 'madness'},
             ],
-            value='none'
+            value='brooch'
         )),
         dbc.Col(dbc.Select(
             id='trinket_2',
@@ -715,7 +715,7 @@ iteration_input = dbc.Col([
                 {'label': 'Crystalforged Trinket', 'value': 'crystalforged'},
                 {'label': 'Madness of the Betrayer', 'value': 'madness'},
             ],
-            value='none'
+            value='tsunami'
         )),
     ]),
     html.Div(
@@ -1561,5 +1561,5 @@ def compute(
 if __name__ == '__main__':
     multiprocessing.freeze_support()
     app.run_server(
-        host='0.0.0.0', port=8080, debug=True
+        host='0.0.0.0', port=8080, debug=False
     )
