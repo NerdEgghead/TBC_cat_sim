@@ -1,0 +1,100 @@
+stats:
+  strength: 337
+  agility: 536
+  intellect: 233
+  spirit: 153
+  attack_power: 3070
+  weapon_damage: 9
+  crit_chance: 36.48
+  hit_chance: 5.45
+  haste_rating: 0
+  armor_penetration: 0
+  expertise_rating: 45
+  weapon_speed: 2.0
+  mana: 5585
+  mp5: 0
+consumables:
+  potion_cd: super #fel haste none
+  list:
+  - agi_elixir
+  - food
+  #- scroll_agi
+  #- scroll_str
+  #- consec
+  - weightstone
+  #- rune
+raid_buffs:
+  list:
+    - kings
+    - might
+    - motw
+    - bshout
+    - trueshot_aura
+    #- sanc_aura
+    - str_totem
+    - agi_totem
+    - ai
+    - spirit
+    #- wisdom
+other_buffs:
+  list:
+    #- mcp
+    #- lust
+    - omen
+    #- bogling_root
+    #- unleashed_rage
+    #- heroic_presence
+    #- be_chain
+  num_mcp: 2
+  ferocious_inspiration: 2
+idols_and_set_bonuses:
+  list:
+    - everbloom
+    - t4_bonus
+    #- t5_bonus
+    #- t6_2p
+    #- t6_4p
+encounter_details:
+  fight_length: 180.0
+  boss_armor: 7700
+damage_debuffs:
+  list:
+    #- gift_of_arthas
+    - sunder
+    #- imp_EA
+    - CoR
+    - faerie_fire
+    #- annihilator
+    - blood_frenzy
+stat_debuffs:
+  list:
+    - imp_ff
+    - hunters_mark
+    - jotc
+    - jow
+    - expose
+  surv_agi: 700
+sim_settings:
+  num_replicates: 20000
+talents:
+  feral_aggression: 5
+  savage_fury: 2
+  naturalist: 5
+  natural_shapeshifter: 3
+  intensity: 2
+player_strategy:
+  finisher: rip
+  rip_cp: 4
+  bite_cp: 5
+  max_wait_time: 1
+  prepop_TF: 0
+  prepop_numticks: 2
+  use_mangle_trick: 1
+  use_innervate: 0
+  use_bite: 1
+  bite_time: 0
+  bear_mangle: 0
+trinkets:
+  #none, tsunami, brooch, hourglass, dst, motc, slayers, dft, icon, abacus, swarmguard, kiss, tenacity, class_trinket, crystalforged, madness
+  trinket_1: brooch
+  trinket_2: tsunami

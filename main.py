@@ -14,11 +14,15 @@ import tbc_cat_sim as ccs
 import multiprocessing
 import trinkets
 import copy
+from prodict import Prodict
+import hiyapyco
 
+default_settings = Prodict.from_dict(hiyapyco.load('default_settings.yml', interpolate=True, method=hiyapyco.METHOD_MERGE, failonmissingfiles=False))
+custom_settings = Prodict.from_dict(hiyapyco.load('custom_settings.yml', interpolate=True, method=hiyapyco.METHOD_MERGE, failonmissingfiles=False))
+settings = Prodict.from_dict(hiyapyco.load('default_settings.yml', 'custom_settings.yml', interpolate=True, method=hiyapyco.METHOD_MERGE, failonmissingfiles=False))
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
 server = app.server
-
 
 stat_input = dbc.Col([
     html.H5('Unbuffed Cat Form Stats'),
@@ -31,7 +35,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=336, id='unbuffed_strength',
+            type='number', value=settings.stats.strength, id='unbuffed_strength',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -47,7 +51,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=536, id='unbuffed_agi',
+            type='number', value=settings.stats.agility, id='unbuffed_agi',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -63,7 +67,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=233, id='unbuffed_int',
+            type='number', value=settings.stats.intellect, id='unbuffed_int',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -79,7 +83,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            value=153, type='number', id='unbuffed_spirit',
+            value=settings.stats.spirit, type='number', id='unbuffed_spirit',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -96,7 +100,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=3070, id='unbuffed_attack_power',
+            type='number', value=settings.stats.attack_power, id='unbuffed_attack_power',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -112,7 +116,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=9, id='weapon_damage',
+            type='number', value=settings.stats.weapon_damage, id='weapon_damage',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -128,7 +132,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=36.48, id='unbuffed_crit',
+            type='number', value=settings.stats.crit_chance, id='unbuffed_crit',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -152,7 +156,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=5.45, id='unbuffed_hit',
+            type='number', value=settings.stats.hit_chance, id='unbuffed_hit',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -176,7 +180,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=0, id='haste_rating',
+            type='number', value=settings.stats.haste_rating, id='haste_rating',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -192,7 +196,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=0, id='armor_pen',
+            type='number', value=settings.stats.armor_penetration, id='armor_pen',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -208,7 +212,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=45, id='expertise_rating',
+            type='number', value=settings.stats.expertise_rating, id='expertise_rating',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -224,7 +228,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            value=2.0, type='number', id='unbuffed_weapon_speed',
+            value=settings.stats.weapon_speed, type='number', id='unbuffed_weapon_speed',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -248,7 +252,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            value=5585, type='number', id='unbuffed_mana',
+            value=settings.stats.mana, type='number', id='unbuffed_mana',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -264,7 +268,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            value=0, type='number', id='unbuffed_mp5',
+            value=settings.stats.mp5, type='number', id='unbuffed_mp5',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -283,10 +287,7 @@ buffs_1 = dbc.Col(
                   {'label': 'Consecrated Sharpening Stone', 'value': 'consec'},
                   {'label': 'Adamantite Weightstone', 'value': 'weightstone'},
                   {'label': 'Dark / Demonic Rune', 'value': 'rune'}],
-         value=[
-             'agi_elixir', 'food', 'scroll_agi', 'scroll_str', 'weightstone',
-             'rune'
-         ],
+         value=custom_settings.get('consumables').get('list') or default_settings.consumables.list,
          id='consumables'
      ),
      dbc.InputGroup(
@@ -299,7 +300,7 @@ buffs_1 = dbc.Col(
                      {'label': 'Haste Potion', 'value': 'haste'},
                      {'label': 'None', 'value': 'none'},
                  ],
-                 value='super', id='potion',
+                 value=settings.consumables.potion_cd, id='potion',
              ),
          ],
          style={'width': '50%', 'marginTop': '1.5%'}
@@ -318,10 +319,7 @@ buffs_1 = dbc.Col(
                   {'label': 'Arcane Intellect', 'value': 'ai'},
                   {'label': 'Prayer of Spirit', 'value': 'spirit'},
                   {'label': 'Blessing of Wisdom', 'value': 'wisdom'}],
-         value=[
-             'kings', 'might', 'motw', 'str_totem', 'agi_totem', 'ai',
-             'spirit',
-         ],
+         value=custom_settings.get('raid_buffs').get('list') if custom_settings.get('raid_buffs') else None  or default_settings.raid_buffs.list,
          id='raid_buffs'
      ),
      html.Br(),
@@ -339,10 +337,11 @@ buffs_1 = dbc.Col(
                           'label': 'Braided Eternium Chain',
                           'value': 'be_chain'
                       }],
-             value=['omen'], id='other_buffs',
+             value=custom_settings.get('other_buffs').get('list') if custom_settings.get('other_buffs') else None or default_settings.other_buffs.list,
+             id='other_buffs',
           ), width='auto'),
           dbc.Col(dbc.Input(
-              value=2, type='number', id='num_mcp',
+              value=settings.other_buffs.num_mcp, type='number', id='num_mcp',
               style={'width': '35%', 'marginTop': '-5%'}
           ))],
      ),
@@ -352,7 +351,7 @@ buffs_1 = dbc.Col(
                  'Ferocious Inspiration stacks:', addon_type='prepend'
              ),
              dbc.Input(
-                 value=2, type='number', id='ferocious_inspiration', min=0,
+                 value=settings.other_buffs.ferocious_inspiration, type='number', id='ferocious_inspiration', min=0,
                  max=4
              )
          ],
@@ -373,7 +372,7 @@ encounter_details = dbc.Col(
                   {'label': '4-piece Tier 5 bonus', 'value': 't5_bonus'},
                   {'label': '2-piece Tier 6 bonus', 'value': 't6_2p'},
                   {'label': '4-piece Tier 6 bonus', 'value': 't6_4p'}],
-         value=['everbloom', 't5_bonus'],
+         value=custom_settings.get('idols_and_set_bonuses').get('list') if custom_settings.get('idols_and_set_bonuses') else None or default_settings.idols_and_set_bonuses.list,
          id='bonuses'
      ),
      html.Br(),
@@ -382,7 +381,7 @@ encounter_details = dbc.Col(
          [
              dbc.InputGroupAddon('Fight Length:', addon_type='prepend'),
              dbc.Input(
-                 value=180.0, type='number', id='fight_length',
+                 value=settings.encounter_details.fight_length, type='number', id='fight_length',
              ),
              dbc.InputGroupAddon('seconds', addon_type='append')
          ],
@@ -391,7 +390,7 @@ encounter_details = dbc.Col(
      dbc.InputGroup(
          [
              dbc.InputGroupAddon('Boss Armor:', addon_type='prepend'),
-             dbc.Input(value=7700, type='number', id='boss_armor')
+             dbc.Input(value=settings.encounter_details.boss_armor, type='number', id='boss_armor')
          ],
          style={'width': '75%'}
      ),
@@ -407,9 +406,7 @@ encounter_details = dbc.Col(
              {'label': 'Annihilator', 'value': 'annihilator'},
              {'label': 'Blood Frenzy', 'value': 'blood_frenzy'},
          ],
-         value=[
-             'imp_EA', 'CoR', 'faerie_fire', 'blood_frenzy'
-         ],
+         value=custom_settings.get('damage_debuffs').get('list') if custom_settings.get('damage_debuffs') else None or default_settings.damage_debuffs.list,
          id='boss_debuffs'
      ),
      html.Br(),
@@ -422,7 +419,7 @@ encounter_details = dbc.Col(
              {'label': 'Judgment of Wisdom', 'value': 'jow'},
              {'label': 'Expose weakness', 'value': 'expose'},
          ],
-         value=['imp_ff', 'hunters_mark', 'jow', 'expose'],
+         value=custom_settings.get('stat_debuffs').get('list') if custom_settings.get('stat_debuffs') else None or default_settings.stat_debuffs.list,
          id='stat_debuffs',
      ),
      dbc.InputGroup(
@@ -430,7 +427,7 @@ encounter_details = dbc.Col(
              dbc.InputGroupAddon(
                  'Survival hunter Agility:', addon_type='prepend'
              ),
-             dbc.Input(value=1000, type='number', id='surv_agi',),
+             dbc.Input(value=settings.stat_debuffs.surv_agi, type='number', id='surv_agi',),
          ],
          size='sm',
          style={'width': '60%', 'marginTop': '2%', 'marginLeft': '10%'},
@@ -448,7 +445,7 @@ iteration_input = dbc.Col([
         }
     ),
     dbc.Input(
-        type='number', value=20000, id='num_replicates',
+        type='number', value=settings.sim_settings.num_replicates, id='num_replicates',
         style={
             'width': '50%', 'display': 'inline-block', 'marginBottom': '2.5%'
         }
@@ -472,7 +469,7 @@ iteration_input = dbc.Col([
                 {'label': '4', 'value': 4},
                 {'label': '5', 'value': 5},
             ],
-            value='0', id='feral_aggression',
+            value=str(settings.talents.feral_aggression), id='feral_aggression',
             style={
                 'width': '35%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -492,7 +489,7 @@ iteration_input = dbc.Col([
                 {'label': '1', 'value': 1},
                 {'label': '2', 'value': 2},
             ],
-            value=2, id='savage_fury',
+            value=settings.talents.savage_fury, id='savage_fury',
             style={
                 'width': '35%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -515,7 +512,7 @@ iteration_input = dbc.Col([
                 {'label': '4', 'value': 4},
                 {'label': '5', 'value': 5},
             ],
-            value=5, id='naturalist',
+            value=settings.talents.naturalist, id='naturalist',
             style={
                 'width': '35%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -536,7 +533,7 @@ iteration_input = dbc.Col([
                 {'label': '2', 'value': 2},
                 {'label': '3', 'value': 3},
             ],
-            value=3, id='natural_shapeshifter',
+            value=settings.talents.natural_shapeshifter, id='natural_shapeshifter',
             style={
                 'width': '35%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -557,7 +554,7 @@ iteration_input = dbc.Col([
                 {'label': '2', 'value': 2},
                 {'label': '3', 'value': 3},
             ],
-            value=3, id='intensity',
+            value=settings.talents.intensity, id='intensity',
             style={
                 'width': '35%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -574,7 +571,7 @@ iteration_input = dbc.Col([
                     {'label': 'Ferocious Bite', 'value': 'bite'},
                     {'label': 'None', 'value': 'none'},
                 ],
-                value='rip', id='finisher',
+                value=settings.player_strategy.finisher, id='finisher',
             ),
         ],
         style={'width': '45%', 'marginBottom': '1.5%'}
@@ -589,7 +586,7 @@ iteration_input = dbc.Col([
                     {'label': '4', 'value': 4},
                     {'label': '5', 'value': 5},
                 ],
-                value=4, id='rip_cp',
+                value=settings.player_strategy.rip_cp, id='rip_cp',
             ),
         ],
         style={'width': '48%', 'marginBottom': '1.5%'}
@@ -605,7 +602,7 @@ iteration_input = dbc.Col([
                     {'label': '4', 'value': 4},
                     {'label': '5', 'value': 5},
                 ],
-                value=5, id='bite_cp',
+                value=settings.player_strategy.bite_cp, id='bite_cp',
             ),
         ],
         style={'width': '60%', 'marginBottom': '1.5%'}
@@ -614,7 +611,7 @@ iteration_input = dbc.Col([
         [
             dbc.InputGroupAddon('Wait at most:', addon_type='prepend'),
             dbc.Input(
-                value=1.0, min=0.0, max=2.0, step=0.1, type='number',
+                value=max(0, min(settings.player_strategy.max_wait_time, 2)), min=0.0, max=2.0, step=0.1, type='number',
                 id='max_wait_time',
             ),
             dbc.InputGroupAddon(
@@ -627,32 +624,32 @@ iteration_input = dbc.Col([
     dbc.Row([
         dbc.Col(dbc.Checklist(
             options=[{'label': " pre-pop Tiger's Fury", 'value': 'prepop_TF'}],
-            value=[], id='prepop_TF',
+            value=['prepop_TF' if settings.player_strategy.prepop_TF == 1 else ''], id='prepop_TF',
         ), width='auto'),
         dbc.Col('at', width='auto'),
         dbc.Col(dbc.Select(
             options=[{'label': '1', 'value': 1}, {'label': '2', 'value': 2}],
-            value=2, id='prepop_numticks',
+            value=settings.player_strategy.prepop_numticks, id='prepop_numticks',
             style={'marginTop': '-7%'},
         ), width='auto'),
         dbc.Col('energy ticks before combat', width='auto')
     ],),
     dbc.Checklist(
         options=[{'label': ' use Mangle trick', 'value': 'use_mangle_trick'}],
-        value=['use_mangle_trick'], id='use_mangle_trick'
+        value=['use_mangle_trick' if settings.player_strategy.use_mangle_trick == 1 else ''], id='use_mangle_trick'
     ),
     dbc.Checklist(
         options=[{'label': ' use Innervate', 'value': 'use_innervate'}],
-        value=[], id='use_innervate'
+        value=['use_innervate' if settings.player_strategy.use_innervate == 1 else ''], id='use_innervate'
     ),
     dbc.Row([
         dbc.Col(dbc.Checklist(
             options=[{'label': " use Ferocious Bite with", 'value': 'bite'}],
-            value=['bite'], id='use_bite',
+            value=['bite' if settings.player_strategy.use_bite == 1 else ''], id='use_bite',
         ), width='auto'),
         dbc.Col('with', width='auto'),
         dbc.Col(dbc.Input(
-            type='number', value=0, id='bite_time', min=0.0, step=0.1,
+            type='number', value=max(0, settings.player_strategy.bite_time), id='bite_time', min=0.0, step=0.1,
             style={'marginTop': '-7%', 'width': '40%'},
         ), width='auto'),
         dbc.Col(
@@ -662,7 +659,7 @@ iteration_input = dbc.Col([
     dbc.Checklist(
         options=[{
             'label': ' Mangle maintained by bear tank', 'value': 'bear_mangle'
-        }], value=[], id='bear_mangle'
+        }], value=['bear_mangle' if settings.player_strategy.bear_mangle == 1 else ''], id='bear_mangle'
     ),
     html.Br(),
     html.H5('Trinkets'),
@@ -690,7 +687,7 @@ iteration_input = dbc.Col([
                 {'label': 'Crystalforged Trinket', 'value': 'crystalforged'},
                 {'label': 'Madness of the Betrayer', 'value': 'madness'},
             ],
-            value='brooch'
+            value=settings.trinkets.trinket_1
         )),
         dbc.Col(dbc.Select(
             id='trinket_2',
@@ -715,7 +712,7 @@ iteration_input = dbc.Col([
                 {'label': 'Crystalforged Trinket', 'value': 'crystalforged'},
                 {'label': 'Madness of the Betrayer', 'value': 'madness'},
             ],
-            value='tsunami'
+            value=settings.trinkets.trinket_2
         )),
     ]),
     html.Div(
