@@ -331,9 +331,12 @@ class Player():
             self.multiplier * (1 + 0.03 * self.feral_aggression)
             * (1 + 0.15 * self.t6_bonus)
         )
+
+        # Tooltip low range base values for Bite are 935 and 766, but that's
+        # incorrect according to the DB.
         self.bite_low = {
-            5: (935 + 0.25 * self.attack_power) * self.bite_multiplier,
-            4: (766 + 0.2 * self.attack_power) * self.bite_multiplier
+            5: (902 + 0.25 * self.attack_power) * self.bite_multiplier,
+            4: (733 + 0.2 * self.attack_power) * self.bite_multiplier
         }
         self.bite_high = {
             5: (968 + 0.25 * self.attack_power) * self.bite_multiplier,
@@ -349,9 +352,12 @@ class Player():
             self.white_high * 1.6 + 264 * self.multiplier
         )
         rip_multiplier = damage_multiplier * (1 + 0.15 * self.t6_bonus)
+
+        # Rip base values are just straight up wrong in tooltip, below numbers
+        # come from the DB, which matches in-game measurements.
         self.rip_tick = {
-            5: (1092 + 0.24*self.attack_power) / 6 * rip_multiplier,
-            4: (894 + 0.24*self.attack_power) / 6 * rip_multiplier
+            5: (1554 + 0.24*self.attack_power) / 6 * rip_multiplier,
+            4: (1272 + 0.24*self.attack_power) / 6 * rip_multiplier
         }
 
         # Adjust damage values for Gift of Arthas
