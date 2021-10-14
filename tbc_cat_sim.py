@@ -91,11 +91,11 @@ def calc_swing_timer(haste_rating, multiplier=1.0):
 
     Arguments:
         haste_rating (int): Player haste rating stat.
+        multiplier (float): Overall haste multiplier from multiplicative haste
+            buffs such as Bloodlust. Defaults to 1.
 
     Returns:
         swing_timer (float): Hasted swing timer in seconds.
-        multiplier (float): Overall haste multiplier from multiplicative haste
-            buffs such as Bloodlust. Defaults to 1.
     """
     return 1.0 / (multiplier * (1 + haste_rating / 1577))
 
