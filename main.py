@@ -339,7 +339,7 @@ buffs_1 = dbc.Col(
                           'label': 'Braided Eternium Chain',
                           'value': 'be_chain'
                       }],
-             value=['omen'], id='other_buffs',
+             value=['omen', 'be_chain'], id='other_buffs',
           ), width='auto'),
           dbc.Col(dbc.Input(
               value=2, type='number', id='num_mcp',
@@ -589,7 +589,7 @@ iteration_input = dbc.Col([
                     {'label': '4', 'value': 4},
                     {'label': '5', 'value': 5},
                 ],
-                value=4, id='rip_cp',
+                value=5, id='rip_cp',
             ),
         ],
         style={'width': '48%', 'marginBottom': '1.5%'}
@@ -1050,9 +1050,7 @@ app.layout = html.Div([
 
 
 # Helper functions used in master callback
-def process_trinkets(
-    trinket_1, trinket_2, player, ap_mod, stat_mod, miss_chance
-):
+def process_trinkets(trinket_1, trinket_2, player, ap_mod, stat_mod):
     proc_trinkets = []
     all_trinkets = []
 
@@ -1065,8 +1063,6 @@ def process_trinkets(
         for stat, increment in trinket_params['passive_stats'].items():
             if stat == 'attack_power':
                 increment *= ap_mod
-            if stat == 'miss_chance':
-                increment = max(increment, -miss_chance)
 
             setattr(player, stat, getattr(player, stat) + increment)
 
@@ -1199,13 +1195,9 @@ def create_buffed_player(
         raw_crit_unbuffed + buffed_agi / 25 + 3 * ('jotc' in stat_debuffs)
         + added_crit_rating / 22.1
     )
-    miss_chance = max(
-        0., 9. - unbuffed_hit - 3 * ('imp_ff' in stat_debuffs)
-        - 1 * ('heroic_presence' in other_buffs)
-    )
     buffed_hit = (
-        (9. - miss_chance)
-        + min(6.5, np.floor(expertise_rating / 3.9425) * 0.25)
+        unbuffed_hit + 3 * ('imp_ff' in stat_debuffs)
+        + 1 * ('heroic_presence' in other_buffs)
     )
     buffed_mana_pool = raw_mana_unbuffed + buffed_int * 15
     buffed_mp5 = unbuffed_mp5 + 39.6 * ('wisdom' in raid_buffs)
@@ -1224,10 +1216,11 @@ def create_buffed_player(
     # Create and return a corresponding Player object
     player = ccs.Player(
         attack_power=buffed_attack_power, hit_chance=buffed_hit / 100,
-        crit_chance=buffed_crit / 100, swing_timer=buffed_swing_timer,
-        mana=buffed_mana_pool, intellect=buffed_int, spirit=buffed_spirit,
-        mp5=buffed_mp5, omen='omen' in other_buffs,
-        feral_aggression=int(feral_aggression), savage_fury=int(savage_fury),
+        expertise_rating=expertise_rating, crit_chance=buffed_crit / 100,
+        swing_timer=buffed_swing_timer, mana=buffed_mana_pool,
+        intellect=buffed_int, spirit=buffed_spirit, mp5=buffed_mp5,
+        omen='omen' in other_buffs, feral_aggression=int(feral_aggression),
+        savage_fury=int(savage_fury),
         natural_shapeshifter=int(natural_shapeshifter),
         intensity=int(intensity), weapon_speed=weapon_speed,
         bonus_damage=bonus_weapon_damage, multiplier=damage_multiplier,
@@ -1237,7 +1230,7 @@ def create_buffed_player(
         pot=potion in ['super', 'fel'], cheap_pot=(potion == 'super'),
         shred_bonus=shred_bonus
     )
-    return player, ap_mod, stat_multiplier * 1.03, miss_chance/100.
+    return player, ap_mod, stat_multiplier * 1.03
 
 
 def run_sim(sim, num_replicates):
@@ -1483,7 +1476,7 @@ def compute(
     ctx = dash.callback_context
 
     # Create Player object based on specified stat inputs and talents
-    player, ap_mod, stat_mod, miss_chance = create_buffed_player(
+    player, ap_mod, stat_mod = create_buffed_player(
         unbuffed_strength, unbuffed_agi, unbuffed_int, unbuffed_spirit,
         unbuffed_ap, unbuffed_crit, unbuffed_hit, haste_rating,
         expertise_rating, armor_pen, weapon_damage, weapon_speed,
@@ -1495,7 +1488,7 @@ def compute(
 
     # Process trinkets
     trinket_list = process_trinkets(
-        trinket_1, trinket_2, player, ap_mod, stat_mod, miss_chance
+        trinket_1, trinket_2, player, ap_mod, stat_mod
     )
 
     # Default output is just the buffed player stats with no further calcs

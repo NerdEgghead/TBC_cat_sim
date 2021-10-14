@@ -167,10 +167,28 @@ class Player():
     simulated player in a boss encounter. Executes events in the cat DPS
     rotation."""
 
+    @property
+    def hit_chance(self):
+        return self._hit_chance
+
+    @hit_chance.setter
+    def hit_chance(self, value):
+        self._hit_chance = value
+        self.calc_miss_chance()
+
+    @property
+    def expertise_rating(self):
+        return self._expertise_rating
+
+    @expertise_rating.setter
+    def expertise_rating(self, value):
+        self._expertise_rating = value
+        self.calc_miss_chance()
+
     def __init__(
-            self, attack_power, hit_chance, crit_chance, armor_pen,
-            swing_timer, mana, intellect, spirit, mp5, jow=False, pot=True,
-            cheap_pot=False, rune=True, t4_bonus=False, t6_2p=False,
+            self, attack_power, hit_chance, expertise_rating, crit_chance,
+            armor_pen, swing_timer, mana, intellect, spirit, mp5, jow=False,
+            pot=True, cheap_pot=False, rune=True, t4_bonus=False, t6_2p=False,
             t6_4p=False, bonus_damage=0, shred_bonus=0, multiplier=1.1,
             omen=True, feral_aggression=0, savage_fury=2,
             natural_shapeshifter=3, intensity=3, weapon_speed=3.0,
@@ -180,8 +198,8 @@ class Player():
 
         Arguments:
             attack_power (int): Fully raid buffed attack power.
-            hit_chance (float): Chance to hit as a fraction. Values above 9%
-                can be used as a proxy for expertise rating on top of hit cap.
+            hit_chance (float): Chance to hit as a fraction.
+            expertise_rating (int): Player's Expertise Rating stat.
             crit_chance (float): Fully raid buffed crit chance as a fraction.
             armor_pen (int): Armor penetration from gear. Boss armor debuffs
                 are handled by Simulation objects as they are not properties of
@@ -228,7 +246,11 @@ class Player():
                 points]. Defaults False.
         """
         self.attack_power = attack_power
-        self.miss_chance = 0.09 - hit_chance + 0.065
+
+        # Set internal hit and expertise values, and derive total miss chance.
+        self._hit_chance = hit_chance
+        self.expertise_rating = expertise_rating
+
         self.crit_chance = crit_chance - 0.048
         self.armor_pen = armor_pen
         self.swing_timer = swing_timer
@@ -260,6 +282,17 @@ class Player():
         self.set_mana_regen()
         self.log = log
         self.reset()
+
+    def calc_miss_chance(self):
+        """Update overall miss chance when a change to the player's hit percent
+        or Expertise Rating occurs."""
+        miss_reduction = min(self._hit_chance * 100, 9.)
+        dodge_reduction = min(
+            6.5, np.floor(self._expertise_rating / 3.9425) * 0.25
+        )
+        self.miss_chance = 0.01 * (
+            (9. - miss_reduction) + (6.5 - dodge_reduction)
+        )
 
     def set_mana_regen(self):
         """Calculate and store mana regeneration rates based on specified regen
@@ -1670,9 +1703,9 @@ class Simulation():
 
         # For hit, we reduce miss chance by 2% if well below hit cap, and
         # increase miss chance by 2% when already capped or close.
-        sign = 1 - 2 * int(self.player.miss_chance < 0.085)
+        sign = 1 - 2 * int(self.player.miss_chance > 0.02)
         dps_deltas['1% hit'] = 0.5 * sign * self.calc_deriv(
-            num_replicates, 'miss_chance', -sign * 0.02, base_dps
+            num_replicates, 'miss_chance', sign * 0.02, base_dps
         )
 
         # Crit is a simple increment

@@ -547,7 +547,7 @@ trinket_library = {
     'icon': {
         'type': 'activated',
         'passive_stats': {
-            'miss_chance': -30./15.77/100,
+            'hit_chance': 30./15.77/100,
         },
         'active_stats': {
             'stat_name': 'armor_pen',
@@ -574,7 +574,7 @@ trinket_library = {
         'type': 'activated',
         'passive_stats': {
             'crit_chance': 14./22.1/100,
-            'miss_chance': -10./15.77/100,
+            'hit_chance': 10./15.77/100,
         },
         'active_stats': {
             'stat_name': 'haste_rating',
@@ -627,7 +627,7 @@ trinket_library = {
         'type': 'proc',
         'passive_stats': {
             'crit_chance': 38./22.1/100,
-            'miss_chance': -10./15.77/100,
+            'hit_chance': 10./15.77/100,
         },
         'active_stats': {
             'stat_name': 'attack_power',
@@ -679,7 +679,7 @@ trinket_library = {
     'madness': {
         'type': 'refreshing_proc',
         'passive_stats': {
-            'miss_chance': -20./15.77/100,
+            'hit_chance': 20./15.77/100,
             'attack_power': 84,
         },
         'active_stats': {
@@ -702,7 +702,7 @@ trinket_library = {
         'type': 'passive',
         'passive_stats': {
             'attack_power': 56,
-            'miss_chance': -20./15.77/100,
+            'hit_chance': 20./15.77/100,
         },
     },
 }
