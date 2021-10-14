@@ -1704,7 +1704,7 @@ class Simulation():
         # For hit, we reduce miss chance by 2% if well below hit cap, and
         # increase miss chance by 2% when already capped or close.
         sign = 1 - 2 * int(self.player.miss_chance > 0.02)
-        dps_deltas['1% hit'] = 0.5 * sign * self.calc_deriv(
+        dps_deltas['1% hit'] = -0.5 * sign * self.calc_deriv(
             num_replicates, 'miss_chance', sign * 0.02, base_dps
         )
 
