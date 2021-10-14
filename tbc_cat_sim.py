@@ -1094,6 +1094,9 @@ class Simulation():
             bite_before_rip
             and (self.rip_end - next_tick >= self.strategy['bite_time'])
         )
+        prio_bite_over_mangle = (
+            self.strategy['bite_over_rip'] or (not mangle_now)
+        )
         time_to_next_tick = next_tick - time
 
         if self.player.mana < self.player.shift_cost:
@@ -1118,14 +1121,7 @@ class Simulation():
                 self.rip(time)
             elif time_to_next_tick > self.strategy['max_wait_time']:
                 self.innervate_or_shift(time)
-        elif mangle_now:
-            if (energy < mangle_cost - 20) and (not rip_next):
-                self.innervate_or_shift(time)
-            elif (energy >= mangle_cost) or self.player.omen_proc:
-                return self.mangle(time)
-            elif time_to_next_tick > self.strategy['max_wait_time']:
-                self.innervate_or_shift(time)
-        elif bite_now or bite_at_end:
+        elif (bite_now or bite_at_end) and prio_bite_over_mangle:
             # Decision tree for Bite usage is more complicated, so there is
             # some duplicated logic with the main tree.
 
@@ -1158,6 +1154,13 @@ class Simulation():
                 wait = True
 
             if wait and (time_to_next_tick > self.strategy['max_wait_time']):
+                self.innervate_or_shift(time)
+        elif mangle_now:
+            if (energy < mangle_cost - 20) and (not rip_next):
+                self.innervate_or_shift(time)
+            elif (energy >= mangle_cost) or self.player.omen_proc:
+                return self.mangle(time)
+            elif time_to_next_tick > self.strategy['max_wait_time']:
                 self.innervate_or_shift(time)
         elif energy >= 22:
             if (energy >= 42) or self.player.omen_proc:
