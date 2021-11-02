@@ -834,6 +834,32 @@ class Player():
             ]
 
 
+class ArmorDebuffs():
+
+    """Controls the delayed application of boss armor debuffs after an
+    encounter begins. At present, only Sunder Armor and Expose Armor are
+    modeled with delayed application, and all other boss debuffs are modeled
+    as applying instantly at the fight start."""
+
+    def __init__(self, sim):
+        """Initialize controller by specifying whether Sunder, EA, or both will
+        be applied.
+
+        sim (Simulation): Simulation object controlling fight execution. The
+            params dictionary of the Simulation will be modified during
+            instantiation of the debuff controller.
+        use_sunder (bool): Whether Sunder Armor will be applied. Note that in
+            runs utilizing Improved Expose Armor, use_sunder must also be set
+            to True in order to model Sunder applications prior to EA going up.
+        use_ea (bool): Whether Expose Armor will be applied. When use_sunder is
+            also True, then Improved Expose Armor will overwrite the existing
+            Sunder stacks once it is applied.
+        """
+        self.sim = sim
+        self.use_sunder = use_sunder
+        self.use_ea = use_ea
+
+
 class Simulation():
 
     """Sets up and runs a simulated fight with the cat DPS rotation."""
@@ -1530,6 +1556,12 @@ class Simulation():
 
         # Replace logged Rip damgae with the actual value realized in the run
         self.player.dmg_breakdown['Rip']['damage'] = rip_damage
+
+        # Deactivate any trinkets that are still up
+        for trinket in self.trinkets:
+            if trinket.active:
+                trinket.deactivate(self.player, self, time=self.fight_length)
+
         output = (times, damage, energy, combos, self.player.dmg_breakdown)
 
         if self.log:

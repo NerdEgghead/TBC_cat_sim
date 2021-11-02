@@ -65,7 +65,8 @@ class Trinket():
         for index, stat_name in enumerate(stat_names):
             self._modify_stat(time, player, sim, stat_name, increments[index])
 
-    def _modify_stat(self, time, player, sim, stat_name, increment):
+    @staticmethod
+    def _modify_stat(time, player, sim, stat_name, increment):
         """Contains the actual stat modification functionality for a single
         stat. Called by the wrapper function, which handles potentially
         iterating through multiple stats to be modified."""
