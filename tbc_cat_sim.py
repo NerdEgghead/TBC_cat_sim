@@ -343,8 +343,13 @@ class Player():
         bonus_damage = (
             self.attack_power/14 + self.bonus_damage + 40 * tigers_fury
         )
+
+        # Legacy compatibility with older Sunder code in case it is needed
+        if isinstance(sunder, bool):
+            sunder *= 5
+
         residual_armor = max(0, (
-            boss_armor - max(sunder * 2600, imp_EA * 3075) - 800 * CoR
+            boss_armor - max(sunder * 520, imp_EA * 3075) - 800 * CoR
             - 610 * faerie_fire - 600 * annihilator - self.armor_pen
         ))
         armor_multiplier = (
@@ -846,18 +851,63 @@ class ArmorDebuffs():
         be applied.
 
         sim (Simulation): Simulation object controlling fight execution. The
-            params dictionary of the Simulation will be modified during
-            instantiation of the debuff controller.
-        use_sunder (bool): Whether Sunder Armor will be applied. Note that in
-            runs utilizing Improved Expose Armor, use_sunder must also be set
-            to True in order to model Sunder applications prior to EA going up.
-        use_ea (bool): Whether Expose Armor will be applied. When use_sunder is
-            also True, then Improved Expose Armor will overwrite the existing
-            Sunder stacks once it is applied.
+            params dictionary of the Simulation will be modified by the debuff
+            controller during the fight.
         """
-        self.sim = sim
-        self.use_sunder = use_sunder
-        self.use_ea = use_ea
+        self.params = sim.params
+        self.process_params()
+
+    def process_params(self):
+        """Use the simulation's existing params dictionary to determine whether
+        Sunder, EA, or both should be applied."""
+        self.use_sunder = bool(self.params['sunder'])
+        self.use_ea = bool(self.params['imp_EA'])
+        self.reset()
+
+    def reset(self):
+        """Remove all armor debuffs at the start of a fight."""
+        self.params['sunder'] = 0
+        self.params['imp_EA'] = False
+
+    def update(self, time, player, sim):
+        """Add Sunder or EA applications at the appropriate times. Currently,
+        the debuff schedule is hard coded as 1 Sunder stack every GCD, and
+        EA applied at 15 seconds if used. This can be made more flexible if
+        desired in the future using class attributes.
+
+        Arguments:
+            time (float): Simulation time, in seconds.
+            player (tbc_cat_sim.Player): Player object whose attributes will be
+                modified by the trinket proc.
+            sim (tbc_cat_sim.Simulation): Simulation object controlling the
+                fight execution.
+        """
+        # If we are Sundering and are at less than 5 stacks, then add a stack
+        # every GCD.
+        if (self.use_sunder and (self.params['sunder'] < 5)
+                and (time >= 1.5 * self.params['sunder'])):
+            self.params['sunder'] += 1
+
+            if sim.log:
+                sim.combat_log.append(
+                    sim.gen_log(time, 'Sunder Armor', 'applied')
+                )
+
+            player.calc_damage_params(**self.params)
+        elif self.use_ea and (not self.params['imp_EA']) and (time >= 15.):
+            self.params['imp_EA'] = True
+
+            if sim.log:
+                if self.params['sunder'] > 0:
+                    sim.combat_log.append(
+                        sim.gen_log(time, 'Sunder Armor', 'falls off')
+                    )
+
+                sim.combat_log.append(
+                    sim.gen_log(time, 'Expose Armor', 'applied')
+                )
+
+            player.calc_damage_params(**self.params)
 
 
 class Simulation():
@@ -933,10 +983,6 @@ class Simulation():
                      '%s.') % (key, self.params.keys(), self.strategy.keys())
                 )
 
-        # Calculate damage ranges for player abilities under the given
-        # encounter parameters.
-        self.player.calc_damage_params(**self.params)
-
         # Determine whether Ferocious Bite is to be used instead of Rip as the
         # primary finishing move.
         self.strategy['bite_over_rip'] = (
@@ -954,6 +1000,16 @@ class Simulation():
             self.trinkets.append(self.haste_pot)
         else:
             self.haste_pot = None
+
+        # Set up controller for delayed armor debuffs. The controller can be
+        # treated identically to a Trinket object as far as the sim is
+        # concerned.
+        self.debuff_controller = ArmorDebuffs(self)
+        self.trinkets.append(self.debuff_controller)
+
+        # Calculate damage ranges for player abilities under the given
+        # encounter parameters.
+        self.player.calc_damage_params(**self.params)
 
         # Set multiplicative haste buffs to 0. The multiplier can be increased
         # during Bloodlust, etc.
@@ -982,6 +1038,8 @@ class Simulation():
                     active_debuffs, self.params.keys()
                 )
             )
+
+        self.debuff_controller.process_params()
 
     def gen_log(self, time, event, outcome):
         """Generate a custom combat log entry.
@@ -1257,9 +1315,10 @@ class Simulation():
 
         Arguments:
             time (float): Simulation time when Tiger's Fury fell off, in
-                seconds. Required only if log_event is True.
+                seconds. Used only for logging.
         """
-        self.player.calc_damage_params(tigers_fury=False, **self.params)
+        self.params['tigers_fury'] = False
+        self.player.calc_damage_params(**self.params)
 
         if self.log:
             self.combat_log.append(
@@ -1320,15 +1379,15 @@ class Simulation():
         # calculate when it should fall off for the specified strategy. Assume
         # TF is popped 100 ms before the appropriate energy tick.
         if self.strategy['prepop_TF']:
-            self.player.calc_damage_params(tigers_fury=True, **self.params)
             tf_end = (
                 energy_tick_start - 0.1 + 6
                 - 2 * self.strategy['prepop_numticks']
             )
             self.player.energy -= 10 * (2 - self.strategy['prepop_numticks'])
-            tf_active = True
+            self.params['tigers_fury'] = True
+            self.player.calc_damage_params(**self.params)
         else:
-            tf_active = False
+            self.params['tigers_fury'] = False
 
         # Determine whether MCP will be used, and activate it if so
         self.num_mcp = self.max_mcp
@@ -1404,9 +1463,8 @@ class Simulation():
                     ))
 
             # Check if Tiger's Fury fell off
-            if tf_active and (time >= tf_end):
+            if self.params['tigers_fury'] and (time >= tf_end):
                 self.drop_tigers_fury(tf_end)
-                tf_active = False
 
             # Check if haste buff is expired or if a new one can be popped
             if self.mcp_equipped and mcp_active and (time > mcp_end - 1e-9):
@@ -1526,9 +1584,8 @@ class Simulation():
                 )
 
             # If we entered caster form, Tiger's Fury fell off
-            if tf_active and (self.player.gcd == 1.5):
+            if self.params['tigers_fury'] and (self.player.gcd == 1.5):
                 self.drop_tigers_fury(time)
-                tf_active = False
 
             # If a trinket proc occurred from a swing or special, apply it
             for trinket in self.trinkets:
@@ -1556,12 +1613,6 @@ class Simulation():
 
         # Replace logged Rip damgae with the actual value realized in the run
         self.player.dmg_breakdown['Rip']['damage'] = rip_damage
-
-        # Deactivate any trinkets that are still up
-        for trinket in self.trinkets:
-            if trinket.active:
-                trinket.deactivate(self.player, self, time=self.fight_length)
-
         output = (times, damage, energy, combos, self.player.dmg_breakdown)
 
         if self.log:
