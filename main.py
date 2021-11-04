@@ -408,7 +408,7 @@ encounter_details = dbc.Col(
              {'label': 'Blood Frenzy', 'value': 'blood_frenzy'},
          ],
          value=[
-             'imp_EA', 'CoR', 'faerie_fire', 'blood_frenzy'
+             'sunder', 'imp_EA', 'CoR', 'faerie_fire', 'blood_frenzy'
          ],
          id='boss_debuffs'
      ),
