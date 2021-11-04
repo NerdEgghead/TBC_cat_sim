@@ -621,7 +621,19 @@ iteration_input = dbc.Col([
                 'seconds for an energy tick', addon_type='append'
             )
         ],
-        style={'width': '63%'}
+        style={'width': '63%', 'marginBottom': '1.5%'}
+    ),
+    dbc.InputGroup(
+        [
+            dbc.InputGroupAddon('Wait', addon_type='prepend'),
+            dbc.Input(
+                value=15.0, min=0.0, step=0.5, type='number', id='cd_delay',
+            ),
+            dbc.InputGroupAddon(
+                'seconds before using cooldowns', addon_type='append'
+            ),
+        ],
+        style={'width': '63%'},
     ),
     html.Br(),
     dbc.Row([
@@ -1050,7 +1062,7 @@ app.layout = html.Div([
 
 
 # Helper functions used in master callback
-def process_trinkets(trinket_1, trinket_2, player, ap_mod, stat_mod):
+def process_trinkets(trinket_1, trinket_2, player, ap_mod, stat_mod, cd_delay):
     proc_trinkets = []
     all_trinkets = []
 
@@ -1090,9 +1102,9 @@ def process_trinkets(trinket_1, trinket_2, player, ap_mod, stat_mod):
             # shared cooldown. For now we will assume that the shared cooldown
             # is always equal to the duration of the first trinket's proc.
             if all_trinkets and (not proc_trinkets):
-                delay = all_trinkets[-1].proc_duration
+                delay = cd_delay + all_trinkets[-1].proc_duration
             else:
-                delay = 0.0
+                delay = cd_delay
 
             all_trinkets.append(
                 trinkets.ActivatedTrinket(delay=delay, **active_stats)
@@ -1450,6 +1462,7 @@ def plot_new_trajectory(sim, show_whites):
     State('rip_cp', 'value'),
     State('bite_cp', 'value'),
     State('max_wait_time', 'value'),
+    State('cd_delay', 'value'),
     State('prepop_TF', 'value'),
     State('prepop_numticks', 'value'),
     State('use_mangle_trick', 'value'),
@@ -1469,9 +1482,9 @@ def compute(
         weight_clicks, graph_clicks, weapon_damage, potion,
         ferocious_inspiration, bonuses, feral_aggression, savage_fury,
         naturalist, natural_shapeshifter, intensity, fight_length, boss_armor,
-        boss_debuffs, finisher, rip_cp, bite_cp, max_wait_time, prepop_TF,
-        prepop_numticks, use_mangle_trick, use_innervate, use_bite, bite_time,
-        bear_mangle, num_replicates, calc_mana_weights, show_whites
+        boss_debuffs, finisher, rip_cp, bite_cp, max_wait_time, cd_delay,
+        prepop_TF, prepop_numticks, use_mangle_trick, use_innervate, use_bite,
+        bite_time, bear_mangle, num_replicates, calc_mana_weights, show_whites
 ):
     ctx = dash.callback_context
 
@@ -1488,7 +1501,7 @@ def compute(
 
     # Process trinkets
     trinket_list = process_trinkets(
-        trinket_1, trinket_2, player, ap_mod, stat_mod
+        trinket_1, trinket_2, player, ap_mod, stat_mod, cd_delay
     )
 
     # Default output is just the buffed player stats with no further calcs
@@ -1507,7 +1520,12 @@ def compute(
     rip_combos = 6 if finisher != 'rip' else int(rip_cp)
 
     if 'lust' in other_buffs:
-        trinket_list.append(trinkets.Bloodlust())
+        trinket_list.append(trinkets.Bloodlust(delay=cd_delay))
+
+    if potion == 'haste':
+        haste_pot = trinkets.HastePotion(delay=cd_delay)
+    else:
+        haste_pot = None
 
     sim = ccs.Simulation(
         player, fight_length + 1e-9, num_mcp=max_mcp,
@@ -1516,8 +1534,7 @@ def compute(
         min_combos_for_bite=int(bite_cp), use_innervate=bool(use_innervate),
         use_mangle_trick=bool(use_mangle_trick), use_bite=bite,
         bite_time=bite_time, bear_mangle=bool(bear_mangle),
-        trinkets=trinket_list, max_wait_time=max_wait_time,
-        haste_pot=(potion == 'haste')
+        trinkets=trinket_list, max_wait_time=max_wait_time, haste_pot=haste_pot
     )
     sim.set_active_debuffs(boss_debuffs)
     player.calc_damage_params(**sim.params)

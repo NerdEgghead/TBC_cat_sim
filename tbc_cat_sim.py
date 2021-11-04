@@ -941,7 +941,7 @@ class Simulation():
     }
 
     def __init__(
-        self, player, fight_length, num_mcp=0, trinkets=[], haste_pot=False,
+        self, player, fight_length, num_mcp=0, trinkets=[], haste_pot=None,
         **kwargs
     ):
         """Initialize simulation.
@@ -956,8 +956,9 @@ class Simulation():
                 once the haste buff expires. Defaults to 0.
             trinkets (list of trinkets.Trinket): List of ActivatedTrinket or
                 ProcTrinket objects that will be used on cooldown.
-            haste_pot (bool): Whether Haste Potions will be used on cooldown in
-                the encounter. Defaults False.
+            haste_pot (trinkets.HastePotion or None): Optional instantiated
+                Haste Potion object that will be used on cooldown in the
+                encounter in addition to the provided trinkets.
             kwargs (dict): Key, value pairs for all other encounter parameters,
                 including boss armor, relevant debuffs, and player stregy
                 specification. An error will be thrown if the parameter is not
@@ -995,11 +996,10 @@ class Simulation():
         )
 
         # Set up Haste Potion usage if requested
-        if haste_pot:
-            self.haste_pot = trinks.HastePotion()
+        self.haste_pot = haste_pot
+
+        if self.haste_pot is not None:
             self.trinkets.append(self.haste_pot)
-        else:
-            self.haste_pot = None
 
         # Set up controller for delayed armor debuffs. The controller can be
         # treated identically to a Trinket object as far as the sim is
