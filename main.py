@@ -1265,7 +1265,7 @@ def create_buffed_player(
 
 def run_sim(sim, num_replicates):
     # Run the sim for the specified number of replicates
-    dps_vals, dmg_breakdown, oom_times = sim.run_replicates(
+    dps_vals, dmg_breakdown, aura_stats, oom_times = sim.run_replicates(
         num_replicates, detailed_output=True
     )
 
@@ -1378,7 +1378,7 @@ def calc_weights(
 
 
 def plot_new_trajectory(sim, show_whites):
-    t_vals, _, energy_vals, cp_vals, _, log = sim.run(log=True)
+    t_vals, _, energy_vals, cp_vals, _, _, log = sim.run(log=True)
     t_fine = np.linspace(0, sim.fight_length, 10000)
     fig = go.Figure()
     fig.add_trace(go.Scatter(

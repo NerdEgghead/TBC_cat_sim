@@ -1341,6 +1341,9 @@ class Simulation():
             damage_breakdown (collection.OrderedDict): Dictionary containing a
                 breakdown of the number of casts and damage done by each player
                 ability.
+            aura_stats (collections.OrderedDict): Dictionary containing a
+                breakdown of the number of activations and total uptime of each
+                buff aura applied from trinkets and other cooldowns.
             combat_log (list of lists): Each entry is a list [time, event,
                 outcome, energy, combo points, mana] all formatted as strings.
                 Only output if log == True.
@@ -1616,7 +1619,31 @@ class Simulation():
 
         # Replace logged Rip damgae with the actual value realized in the run
         self.player.dmg_breakdown['Rip']['damage'] = rip_damage
-        output = (times, damage, energy, combos, self.player.dmg_breakdown)
+
+        # Perform a final update on trinkets at the exact fight end for
+        # accurate uptime calculations. Manually deactivate any trinkets that
+        # are still up, and consolidate the aura uptimes.
+        aura_stats = collections.OrderedDict()
+
+        for trinket in self.trinkets:
+            trinket.update(self.fight_length, self.player, self)
+
+            try:
+                if trinket.active:
+                    trinket.deactivate(
+                        self.player, self, time=self.fight_length
+                    )
+
+                aura_stats[trinket.proc_name] = {
+                    'procs': trinket.num_procs, 'uptime': trinket.uptime
+                }
+            except AttributeError:
+                pass
+
+        output = (
+            times, damage, energy, combos, self.player.dmg_breakdown,
+            aura_stats
+        )
 
         if self.log:
             output += (self.combat_log,)
@@ -1631,6 +1658,8 @@ class Simulation():
             avg_dps (float): Average DPS on this iteration.
             dmg_breakdown (dict): Breakdown of cast count and damage done by
                 each player ability on this iteration.
+            aura_stats (dict): Breakdown of proc count and total uptime of
+                each player cooldown on this iteration.
             time_to_oom (float): Time at which player went oom in this
                 iteration. If the player did not oom, then the fight length
                 used in this iteration will be returned instead.
@@ -1648,7 +1677,7 @@ class Simulation():
         randomized_fight_length = base_fight_length + np.random.randn()
         self.fight_length = randomized_fight_length
 
-        _, damage, _, _, dmg_breakdown = self.run()
+        _, damage, _, _, dmg_breakdown, aura_stats = self.run()
         avg_dps = np.sum(damage) / self.fight_length
         self.fight_length = base_fight_length
 
@@ -1657,7 +1686,7 @@ class Simulation():
         else:
             oom_time = self.time_to_oom
 
-        return avg_dps, dmg_breakdown, oom_time
+        return avg_dps, dmg_breakdown, aura_stats, oom_time
 
     def run_replicates(self, num_replicates, detailed_output=False):
         """Perform several runs of the simulation in order to collect
@@ -1674,6 +1703,10 @@ class Simulation():
                 averaged statistics for the number of casts and total damage
                 done by each player ability over the simulated fight length.
                 Output only if detailed_output == True.
+            aura_summary (collections.OrderedDict): Dictionary containing
+                averaged statistics for the number of procs and total uptime
+                of each player cooldown over the simulated fight length. Output
+                only if detailed_output == True.
             oom_times (np.ndarray): Array containing times at which the player
                 went oom in each run. Output only if detailed_output == True.
                 If the player did not oom in a run, the corresponding entry
@@ -1694,7 +1727,7 @@ class Simulation():
         i = 0
 
         for output in pool.imap(self.iterate, range(num_replicates)):
-            avg_dps, dmg_breakdown, time_to_oom = output
+            avg_dps, dmg_breakdown, aura_stats, time_to_oom = output
             dps_vals[i] = avg_dps
 
             if not detailed_output:
@@ -1704,12 +1737,19 @@ class Simulation():
             # Consolidate damage breakdown for the fight
             if i == 0:
                 cast_sum = copy.deepcopy(dmg_breakdown)
+                aura_sum = copy.deepcopy(aura_stats)
             else:
                 for ability in cast_sum:
                     for key in cast_sum[ability]:
                         val = dmg_breakdown[ability][key]
                         cast_sum[ability][key] = (
                             (cast_sum[ability][key] * i + val) / (i + 1)
+                        )
+                for aura in aura_sum:
+                    for key in aura_sum[aura]:
+                        val = aura_stats[aura][key]
+                        aura_sum[aura][key] = (
+                            (aura_sum[aura][key] * i + val) / (i + 1)
                         )
 
             # Consolidate oom time
@@ -1721,7 +1761,7 @@ class Simulation():
         if not detailed_output:
             return dps_vals
 
-        return dps_vals, cast_sum, oom_times
+        return dps_vals, cast_sum, aura_sum, oom_times
 
     def calc_deriv(self, num_replicates, param, increment, base_dps):
         """Calculate DPS increase after incrementing a player stat.

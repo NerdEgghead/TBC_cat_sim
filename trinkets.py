@@ -45,6 +45,9 @@ class Trinket():
         self.activation_time = -np.inf
         self.active = False
         self.can_proc = True
+        self.num_procs = 0
+        self.uptime = 0.0
+        self.last_update = 0.0
 
     def modify_stat(self, time, player, sim, increment):
         """Change a player stat when a trinket is activated or deactivated.
@@ -109,6 +112,7 @@ class Trinket():
         # Mark trinket as active
         self.active = True
         self.can_proc = False
+        self.num_procs += 1
 
         # Log if requested
         if sim.log:
@@ -160,6 +164,14 @@ class Trinket():
                 standard trinkets, but custom subclasses can implement fixed
                 damage procs that would be returned on each update.
         """
+        # Update average proc uptime value
+        if time > self.last_update:
+            dt = time - self.last_update
+            self.uptime = (
+                (self.uptime * self.last_update + dt * self.active) / time
+            )
+            self.last_update = time
+
         # First check if an existing buff has fallen off
         if self.active and (time > self.deactivation_time - 1e-9):
             self.deactivate(player, sim)
@@ -236,6 +248,9 @@ class ActivatedTrinket(Trinket):
 
         self.active = False
         self.can_proc = not self.delay
+        self.num_procs = 0
+        self.uptime = 0.0
+        self.last_update = 0.0
 
     def apply_proc(self):
         """Determine whether or not the trinket is activated at the current
@@ -439,6 +454,9 @@ class BadgeOfTheSwarmguard(ProcTrinket):
         self.activation_time = -np.inf
         self._reset()
         self.stat_increment = 0
+        self.num_procs = 0
+        self.uptime = 0.0
+        self.last_update = 0.0
 
     def _reset(self):
         self.active = False
@@ -546,6 +564,8 @@ class PoisonVial(ProcTrinket):
         Returns:
             damage_done (float): Damage dealt by the proc.
         """
+        self.num_procs += 1
+
         # First roll for miss. Assume 0 spell hit, so miss chance is 17%.
         miss_roll = np.random.rand()
 
