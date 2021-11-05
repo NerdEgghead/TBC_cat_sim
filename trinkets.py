@@ -89,6 +89,12 @@ class Trinket():
                 modified by the trinket proc.
             sim (tbc_cat_sim.Simulation): Simulation object controlling the
                 fight execution.
+
+        Returns:
+            damage_done (float): Any instant damage that is dealt when the
+                trinket is activated. Defaults to 0 for standard trinkets, but
+                custom subclasses can implement fixed damage procs that would
+                be calculated in this method.
         """
         self.activation_time = time
         self.deactivation_time = time + self.proc_duration
@@ -107,6 +113,9 @@ class Trinket():
         # Log if requested
         if sim.log:
             sim.combat_log.append(sim.gen_log(time, self.proc_name, 'applied'))
+
+        # Return default damage dealt of 0
+        return 0.0
 
     def deactivate(self, player, sim, time=None):
         """Deactivate the trinket buff when the duration has expired.
@@ -144,6 +153,12 @@ class Trinket():
                 automatically if the appropriate conditions are met. Defaults
                 True, but can be set False if the user wants to control
                 trinket activations manually.
+
+        Returns:
+            damage_done (float): Any instant damage that is dealt if the
+                trinket is activated at the specified time. Defaults to 0 for
+                standard trinkets, but custom subclasses can implement fixed
+                damage procs that would be returned on each update.
         """
         # First check if an existing buff has fallen off
         if self.active and (time > self.deactivation_time - 1e-9):
@@ -156,7 +171,10 @@ class Trinket():
 
         # Now decide whether a proc actually happens
         if allow_activation and self.apply_proc():
-            self.activate(time, player, sim)
+            return self.activate(time, player, sim)
+
+        # Return default damage dealt of 0
+        return 0.0
 
     def apply_proc(self):
         """Determine whether or not the trinket is activated at the current
@@ -262,7 +280,7 @@ class HastePotion(ActivatedTrinket):
             sim (tbc_cat_sim.Simulation): Simulation object controlling the
                 fight execution.
         """
-        ActivatedTrinket.update(
+        return ActivatedTrinket.update(
             self, time, player, sim, allow_activation=False
         )
 
@@ -492,6 +510,100 @@ class BadgeOfTheSwarmguard(ProcTrinket):
                     sim.gen_log(time, self.proc_name, 'applied')
                 )
 
+        return 0.0
+
+
+class PoisonVial(ProcTrinket):
+    """Custom class to handle instant damage procs from the Romulo's Poison
+    Vial trinket."""
+
+    def __init__(self, white_chance_on_hit, yellow_chance_on_hit, *args):
+        """Initialize a Trinket object modeling RPV. Since RPV is a ppm
+        trinket, the user must pre-calculate the proc chances based on the
+        swing timer and equipped weapon speed.
+
+        Arguments:
+            white_chance_on_hit (float): Probability of a proc on a successful
+                normal hit, between 0 and 1.
+            yellow_chance_on_hit (float): Separate proc rate for special
+                abilities.
+        """
+        ProcTrinket.__init__(
+            self, stat_name=None, stat_increment=None,
+            proc_name="Romulo's Poison", proc_duration=0,
+            cooldown=0., chance_on_hit=white_chance_on_hit,
+            yellow_chance_on_hit=yellow_chance_on_hit
+        )
+
+    def activate(self, time, sim):
+        """Deal damage when the trinket procs.
+
+        Arguments:
+            time (float): Simulation time, in seconds, of activation.
+            sim (tbc_cat_sim.Simulation): Simulation object controlling the
+                fight execution.
+
+        Returns:
+            damage_done (float): Damage dealt by the proc.
+        """
+        # First roll for miss. Assume 0 spell hit, so miss chance is 17%.
+        miss_roll = np.random.rand()
+
+        if miss_roll < 0.17:
+            if sim.log:
+                sim.combat_log.append(
+                    sim.gen_log(time, self.proc_name, 'miss')
+                )
+
+            return 0.0
+
+        # Now roll the base damage done by the proc
+        base_damage = 222 + np.random.rand() * 110
+
+        # Now roll for partial resists. Assume that the boss has no nature
+        # resistance, so the only source of partials is the level based
+        # resistance of 24 for a boss mob. The partial resist table for this
+        # condition was taken from this calculator:
+        # https://royalgiraffe.github.io/legacy-sim/#/resistances
+        resist_roll = np.random.rand()
+
+        if resist_roll < 0.84:
+            dmg_done = base_damage
+        elif resist_roll < 0.95:
+            dmg_done = 0.75 * base_damage
+        elif resist_roll < 0.99:
+            dmg_done = 0.5 * base_damage
+        else:
+            dmg_done = 0.25 * base_damage
+
+        if sim.log:
+            sim.combat_log.append(
+                sim.gen_log(time, self.proc_name, '%d' % dmg_done)
+            )
+
+        return dmg_done
+
+    def update(self, time, player, sim):
+        """Check if a trinket proc occurred on the player's last attack, and
+        perform associated bookkeeping.
+
+        Arguments:
+            time (float): Simulation time, in seconds.
+            player (tbc_cat_sim.Player): Player object whose attributes can be
+                modified by trinket procs. Unused for RPV calculations, but
+                required by the Trinket API.
+            sim (tbc_cat_sim.Simulation): Simulation object controlling the
+                fight execution.
+
+        Returns:
+            damage_done (float): Damage dealt by the trinket since the last
+                check.
+        """
+        if self.apply_proc():
+            return self.activate(time, sim)
+
+        return 0.0
+
 
 class RefreshingProcTrinket(ProcTrinket):
     """Handles trinkets that can proc when already active to refresh the buff
@@ -514,7 +626,7 @@ class RefreshingProcTrinket(ProcTrinket):
         if self.active:
             self.deactivate(player, sim, time=time)
 
-        ProcTrinket.activate(self, time, player, sim)
+        return ProcTrinket.activate(self, time, player, sim)
 
 
 # Library of recognized TBC trinkets and associated parameters
@@ -662,6 +774,17 @@ trinket_library = {
             'stat_name': 'armor_pen',
             'proc_type': 'ppm',
             'proc_rate': 10.,
+        },
+    },
+    'vial': {
+        'type': 'proc',
+        'passive_stats': {
+            'hit_chance': 35./15.77/100,
+        },
+        'active_stats': {
+            'stat_name': 'none',
+            'proc_type': 'ppm',
+            'proc_rate': 1.,
         },
     },
     'class_trinket': {

@@ -909,6 +909,8 @@ class ArmorDebuffs():
 
             player.calc_damage_params(**self.params)
 
+        return 0.0
+
 
 class Simulation():
 
@@ -1519,7 +1521,7 @@ class Simulation():
 
             # Activate or deactivate trinkets if appropriate
             for trinket in self.trinkets:
-                trinket.update(time, self.player, self)
+                dmg_done += trinket.update(time, self.player, self)
 
             # Check if a melee swing happens at this time
             if time == self.swing_times[0]:
@@ -1572,12 +1574,7 @@ class Simulation():
             if self.player.gcd < 1e-9:
                 dmg_done += self.execute_rotation(time, next_tick)
 
-            # Log current parameters
-            times.append(time)
-            damage.append(dmg_done)
-            energy.append(self.player.energy)
-            combos.append(self.player.combo_points)
-
+            # Append player's log to running combat log
             if self.log and self.player.combat_log:
                 self.combat_log.append(
                     ['%.3f' % time] + self.player.combat_log
@@ -1589,11 +1586,17 @@ class Simulation():
 
             # If a trinket proc occurred from a swing or special, apply it
             for trinket in self.trinkets:
-                trinket.update(time, self.player, self)
+                dmg_done += trinket.update(time, self.player, self)
 
             # If a proc ended at this timestep, remove it from the list
             if self.proc_end_times and (time == self.proc_end_times[0]):
                 self.proc_end_times.pop(0)
+
+            # Log current parameters
+            times.append(time)
+            damage.append(dmg_done)
+            energy.append(self.player.energy)
+            combos.append(self.player.combo_points)
 
             # Update time
             previous_time = time

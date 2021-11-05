@@ -708,6 +708,7 @@ iteration_input = dbc.Col([
                 },
                 {'label': 'Crystalforged Trinket', 'value': 'crystalforged'},
                 {'label': 'Madness of the Betrayer', 'value': 'madness'},
+                {'label': "Romulo's Poison Vial", 'value': 'vial'},
             ],
             value='brooch'
         )),
@@ -733,6 +734,7 @@ iteration_input = dbc.Col([
                 },
                 {'label': 'Crystalforged Trinket', 'value': 'crystalforged'},
                 {'label': 'Madness of the Betrayer', 'value': 'madness'},
+                {'label': "Romulo's Poison Vial", 'value': 'vial'},
             ],
             value='tsunami'
         )),
@@ -1135,6 +1137,11 @@ def process_trinkets(trinket_1, trinket_2, player, ap_mod, stat_mod, cd_delay):
 
             if trinket == 'swarmguard':
                 trinket_obj = trinkets.BadgeOfTheSwarmguard(
+                    active_stats['chance_on_hit'],
+                    active_stats['yellow_chance_on_hit']
+                )
+            elif trinket == 'vial':
+                trinket_obj = trinkets.PoisonVial(
                     active_stats['chance_on_hit'],
                     active_stats['yellow_chance_on_hit']
                 )
