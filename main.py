@@ -310,19 +310,25 @@ buffs_1 = dbc.Col(
          options=[{'label': 'Blessing of Kings', 'value': 'kings'},
                   {'label': 'Blessing of Might', 'value': 'might'},
                   {'label': 'Mark of the Wild', 'value': 'motw'},
-                  {'label': 'Battle Shout', 'value': 'bshout'},
                   {'label': 'Trueshot Aura', 'value': 'trueshot_aura'},
                   {'label': 'Improved Sanctity Aura', 'value': 'sanc_aura'},
                   {'label': 'Strength of Earth Totem', 'value': 'str_totem'},
                   {'label': 'Grace of Air Totem', 'value': 'agi_totem'},
                   {'label': 'Arcane Intellect', 'value': 'ai'},
                   {'label': 'Prayer of Spirit', 'value': 'spirit'},
-                  {'label': 'Blessing of Wisdom', 'value': 'wisdom'}],
+                  {'label': 'Blessing of Wisdom', 'value': 'wisdom'},
+                  {'label': 'Battle Shout', 'value': 'bshout'}],
          value=[
              'kings', 'might', 'motw', 'str_totem', 'agi_totem', 'ai',
              'spirit',
          ],
          id='raid_buffs'
+     ),
+     dbc.Checklist(
+         options=[{'label': 'Commanding Presence', 'value': 'talent'},
+                  {'label': "Solarian's Sapphire", 'value': 'trinket'}],
+         value=[], id='bshout_options',
+         style={'marginLeft': '5%'},
      ),
      html.Br(),
      html.H5('Other Buffs'),
@@ -1147,10 +1153,10 @@ def create_buffed_player(
         unbuffed_strength, unbuffed_agi, unbuffed_int, unbuffed_spirit,
         unbuffed_ap, unbuffed_crit, unbuffed_hit, haste_rating,
         expertise_rating, armor_pen, weapon_damage, weapon_speed,
-        unbuffed_mana, unbuffed_mp5, consumables, raid_buffs, num_mcp,
-        other_buffs, stat_debuffs, surv_agi, feral_aggression, savage_fury,
-        naturalist, natural_shapeshifter, ferocious_inspiration, intensity,
-        potion, bonuses, raven_idol
+        unbuffed_mana, unbuffed_mp5, consumables, raid_buffs, bshout_options,
+        num_mcp, other_buffs, stat_debuffs, surv_agi, feral_aggression,
+        savage_fury, naturalist, natural_shapeshifter, ferocious_inspiration,
+        intensity, potion, bonuses, raven_idol
 ):
     """Compute fully raid buffed stats based on specified raid buffs, and
     instantiate a Player object with those stats."""
@@ -1189,9 +1195,13 @@ def create_buffed_player(
 
     # Now augment secondary stats
     ap_mod = 1.1 * (1 + 0.1 * ('unleashed_rage' in other_buffs))
+    bshout_ap = (
+        ('bshout' in raid_buffs) * (306 + 70 * ('trinket' in bshout_options))
+        * (1. + 0.25 * ('talent' in bshout_options))
+    )
     buffed_attack_power = ap_mod * (
         raw_ap_unbuffed + 2 * buffed_strength + buffed_agi
-        + 222 * ('might' in raid_buffs) + 382 * ('bshout' in raid_buffs)
+        + 222 * ('might' in raid_buffs) + bshout_ap
         + 100 * ('trueshot_aura' in raid_buffs)
         + 100 * ('consec' in consumables)
         + 110 * ('hunters_mark' in stat_debuffs)
@@ -1436,6 +1446,7 @@ def plot_new_trajectory(sim, show_whites):
     Input('unbuffed_mp5', 'value'),
     Input('consumables', 'value'),
     Input('raid_buffs', 'value'),
+    Input('bshout_options', 'value'),
     Input('num_mcp', 'value'),
     Input('other_buffs', 'value'),
     Input('raven_idol', 'value'),
@@ -1477,8 +1488,8 @@ def compute(
         unbuffed_strength, unbuffed_agi, unbuffed_int, unbuffed_spirit,
         unbuffed_ap, unbuffed_crit, unbuffed_hit, haste_rating, armor_pen,
         expertise_rating, weapon_speed, unbuffed_mana, unbuffed_mp5,
-        consumables, raid_buffs, num_mcp, other_buffs, raven_idol,
-        stat_debuffs, surv_agi, trinket_1, trinket_2, run_clicks,
+        consumables, raid_buffs, bshout_options, num_mcp, other_buffs,
+        raven_idol, stat_debuffs, surv_agi, trinket_1, trinket_2, run_clicks,
         weight_clicks, graph_clicks, weapon_damage, potion,
         ferocious_inspiration, bonuses, feral_aggression, savage_fury,
         naturalist, natural_shapeshifter, intensity, fight_length, boss_armor,
@@ -1493,10 +1504,10 @@ def compute(
         unbuffed_strength, unbuffed_agi, unbuffed_int, unbuffed_spirit,
         unbuffed_ap, unbuffed_crit, unbuffed_hit, haste_rating,
         expertise_rating, armor_pen, weapon_damage, weapon_speed,
-        unbuffed_mana, unbuffed_mp5, consumables, raid_buffs, num_mcp,
-        other_buffs, stat_debuffs, surv_agi, feral_aggression, savage_fury,
-        naturalist, natural_shapeshifter, ferocious_inspiration, intensity,
-        potion, bonuses, raven_idol
+        unbuffed_mana, unbuffed_mp5, consumables, raid_buffs, bshout_options,
+        num_mcp, other_buffs, stat_debuffs, surv_agi, feral_aggression,
+        savage_fury, naturalist, natural_shapeshifter, ferocious_inspiration,
+        intensity, potion, bonuses, raven_idol
     )
 
     # Process trinkets
