@@ -942,6 +942,15 @@ sim_output = dbc.Col([
         html.Tbody(id='dps_breakdown_table')
     ]), id='loading_3', type='default'),
     html.Br(),
+    html.H5('Aura Statistics'),
+    dcc.Loading(children=dbc.Table([
+        html.Thead(html.Tr([
+            html.Th('Aura Name'), html.Th('Number of Procs'),
+            html.Th('Average Uptime'),
+        ])),
+        html.Tbody(id='aura_breakdown_table')
+    ]), id='loading_auras', type='default'),
+    html.Br(),
     html.Br()
 ], style={'marginLeft': '2.5%', 'marginBottom': '2.5%'}, width=4, xl=3)
 
@@ -1285,21 +1294,34 @@ def run_sim(sim, num_replicates):
         )
 
     # Create DPS breakdown table
-    table = []
+    dps_table = []
 
     for ability in dmg_breakdown:
         if ability in ['Claw']:
             continue
 
         ability_dps = dmg_breakdown[ability]['damage'] / sim.fight_length
-        table.append(html.Tr([
+        dps_table.append(html.Tr([
             html.Td(ability),
             html.Td('%.3f' % dmg_breakdown[ability]['casts']),
             html.Td('%.3f' % ability_dps),
             html.Td('%.1f%%' % (ability_dps / avg_dps * 100))
         ]))
 
-    return avg_dps, (mean_dps_str, median_dps_str, oom_time_str, table)
+    # Create Aura uptime table
+    aura_table = []
+
+    for row in aura_stats:
+        aura_table.append(html.Tr([
+            html.Td(row[0]),
+            html.Td('%.3f' % row[1]),
+            html.Td('%.1f%%' % (row[2] * 100))
+        ]))
+
+    return (
+        avg_dps,
+        (mean_dps_str, median_dps_str, oom_time_str, dps_table, aura_table),
+    )
 
 
 def append_mana_weights(
@@ -1433,6 +1455,7 @@ def plot_new_trajectory(sim, show_whites):
     Output('median_dps', 'children'),
     Output('time_to_oom', 'children'),
     Output('dps_breakdown_table', 'children'),
+    Output('aura_breakdown_table', 'children'),
     Output('error_str', 'children'),
     Output('error_msg', 'children'),
     Output('stat_weight_table', 'children'),
@@ -1569,7 +1592,7 @@ def compute(
              ['run_button.n_clicks', 'weight_button.n_clicks'])):
         avg_dps, dps_output = run_sim(sim, num_replicates)
     else:
-        dps_output = ('', '', '', [])
+        dps_output = ('', '', '', [], [])
 
     # If "Stat Weights" button was pressed, then calculate weights.
     if (ctx.triggered and

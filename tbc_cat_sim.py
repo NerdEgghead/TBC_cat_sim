@@ -1341,9 +1341,9 @@ class Simulation():
             damage_breakdown (collection.OrderedDict): Dictionary containing a
                 breakdown of the number of casts and damage done by each player
                 ability.
-            aura_stats (collections.OrderedDict): Dictionary containing a
-                breakdown of the number of activations and total uptime of each
-                buff aura applied from trinkets and other cooldowns.
+            aura_stats (list of lists): Breakdown of the number of activations
+                and total uptime of each buff aura applied from trinkets and
+                other cooldowns.
             combat_log (list of lists): Each entry is a list [time, event,
                 outcome, energy, combo points, mana] all formatted as strings.
                 Only output if log == True.
@@ -1623,7 +1623,7 @@ class Simulation():
         # Perform a final update on trinkets at the exact fight end for
         # accurate uptime calculations. Manually deactivate any trinkets that
         # are still up, and consolidate the aura uptimes.
-        aura_stats = collections.OrderedDict()
+        aura_stats = []
 
         for trinket in self.trinkets:
             trinket.update(self.fight_length, self.player, self)
@@ -1634,9 +1634,9 @@ class Simulation():
                         self.player, self, time=self.fight_length
                     )
 
-                aura_stats[trinket.proc_name] = {
-                    'procs': trinket.num_procs, 'uptime': trinket.uptime
-                }
+                aura_stats.append(
+                    [trinket.proc_name, trinket.num_procs, trinket.uptime]
+                )
             except AttributeError:
                 pass
 
@@ -1658,8 +1658,8 @@ class Simulation():
             avg_dps (float): Average DPS on this iteration.
             dmg_breakdown (dict): Breakdown of cast count and damage done by
                 each player ability on this iteration.
-            aura_stats (dict): Breakdown of proc count and total uptime of
-                each player cooldown on this iteration.
+            aura_stats (list of lists): Breakdown of proc count and total
+                uptime of each player cooldown on this iteration.
             time_to_oom (float): Time at which player went oom in this
                 iteration. If the player did not oom, then the fight length
                 used in this iteration will be returned instead.
@@ -1703,10 +1703,9 @@ class Simulation():
                 averaged statistics for the number of casts and total damage
                 done by each player ability over the simulated fight length.
                 Output only if detailed_output == True.
-            aura_summary (collections.OrderedDict): Dictionary containing
-                averaged statistics for the number of procs and total uptime
-                of each player cooldown over the simulated fight length. Output
-                only if detailed_output == True.
+            aura_summary (list of lists): Averaged statistics for the number of
+                procs and total uptime of each player cooldown over the
+                simulated fight length. Output only if detailed_output == True.
             oom_times (np.ndarray): Array containing times at which the player
                 went oom in each run. Output only if detailed_output == True.
                 If the player did not oom in a run, the corresponding entry
@@ -1745,11 +1744,11 @@ class Simulation():
                         cast_sum[ability][key] = (
                             (cast_sum[ability][key] * i + val) / (i + 1)
                         )
-                for aura in aura_sum:
-                    for key in aura_sum[aura]:
-                        val = aura_stats[aura][key]
-                        aura_sum[aura][key] = (
-                            (aura_sum[aura][key] * i + val) / (i + 1)
+                for row in range(len(aura_sum)):
+                    for col in [1, 2]:
+                        val = aura_stats[row][col]
+                        aura_sum[row][col] = (
+                            (aura_sum[row][col] * i + val) / (i + 1)
                         )
 
             # Consolidate oom time

@@ -465,7 +465,7 @@ class BadgeOfTheSwarmguard(ProcTrinket):
         self.num_stacks = 0
         self.proc_name = 'Badge of the Swarmguard'
 
-    def deactivate(self, player, sim):
+    def deactivate(self, player, sim, time=None):
         """Deactivate the trinket buff when the duration has expired.
 
         Arguments:
@@ -473,6 +473,8 @@ class BadgeOfTheSwarmguard(ProcTrinket):
                 restored to their original values.
             sim (tbc_cat_sim.Simulation): Simulation object controlling the
                 fight execution.
+            time (float): Time at which the trinket is deactivated. Defaults to
+                the stored time for automatic deactivation.
         """
         # Temporarily change the stat increment to the total ArP gained while
         # the trinket was active
@@ -480,7 +482,7 @@ class BadgeOfTheSwarmguard(ProcTrinket):
 
         # Reset trinket to inactive state
         self._reset()
-        Trinket.deactivate(self, player, sim)
+        Trinket.deactivate(self, player, sim, time=time)
         self.stat_increment = 0
 
     def apply_proc(self):
