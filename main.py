@@ -337,6 +337,7 @@ buffs_1 = dbc.Col(
              options=[{'label': 'Manual Crowd Pummeler - Maximum uses:',
                        'value': 'mcp'},
                       {'label': 'Bloodlust', 'value': 'lust'},
+                      {'label': 'Drums of Battle', 'value': 'drums'},
                       {'label': 'Omen of Clarity', 'value': 'omen'},
                       {'label': 'Bogling Root', 'value': 'bogling_root'},
                       {'label': 'Unleashed Rage', 'value': 'unleashed_rage'},
@@ -1532,6 +1533,10 @@ def compute(
 
     if 'lust' in other_buffs:
         trinket_list.append(trinkets.Bloodlust(delay=cd_delay))
+    if 'drums' in other_buffs:
+        trinket_list.append(trinkets.ActivatedTrinket(
+            'haste_rating', 80, 'Drums of Battle', 30, 120, delay=cd_delay
+        ))
 
     if potion == 'haste':
         haste_pot = trinkets.HastePotion(delay=cd_delay)
