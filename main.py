@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Run this app with `python app.py` and
@@ -709,6 +710,9 @@ iteration_input = dbc.Col([
                 {'label': 'Crystalforged Trinket', 'value': 'crystalforged'},
                 {'label': 'Madness of the Betrayer', 'value': 'madness'},
                 {'label': "Romulo's Poison Vial", 'value': 'vial'},
+                {'label': 'Steely Naaru Sliver', 'value': 'steely_naaru_sliver'},
+                {'label': 'Shard of Contempt', 'value': 'shard_of_contempt'},
+                {'label': "Berserker's Call", 'value': 'berserkers_call'},
             ],
             value='brooch'
         )),
@@ -735,6 +739,9 @@ iteration_input = dbc.Col([
                 {'label': 'Crystalforged Trinket', 'value': 'crystalforged'},
                 {'label': 'Madness of the Betrayer', 'value': 'madness'},
                 {'label': "Romulo's Poison Vial", 'value': 'vial'},
+                {'label': 'Steely Naaru Sliver', 'value': 'steely_naaru_sliver'},
+                {'label': 'Shard of Contempt', 'value': 'shard_of_contempt'},
+                {'label': "Berserker's Call", 'value': 'berserkers_call'},
             ],
             value='tsunami'
         )),

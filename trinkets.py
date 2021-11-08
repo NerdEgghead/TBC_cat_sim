@@ -666,6 +666,19 @@ trinket_library = {
             'cooldown': 120,
         },
     },
+    'berserkers_call': {
+        'type': 'activated',
+        'passive_stats': {
+            'attack_power': 90,
+        },
+        'active_stats': {
+            'stat_name': 'attack_power',
+            'stat_increment': 360,
+            'proc_name': 'Call of the Berserker',
+            'proc_duration': 20,
+            'cooldown': 120,
+        },
+    },
     'slayers': {
         'type': 'activated',
         'passive_stats': {
@@ -820,6 +833,27 @@ trinket_library = {
             'cooldown': 0,
             'proc_type': 'chance_on_hit',
             'proc_rate': 0.03,
+        },
+    },
+    'steely_naaru_sliver': {
+        'type': 'passive',
+        'passive_stats': {
+            'expertise_rating': 54,
+        },
+    },
+    'shard_of_contempt': {
+        'type': 'proc',
+        'passive_stats': {
+            'expertise_rating': 44,
+        },
+        'active_stats': {
+            'stat_name': 'attack_power',
+            'stat_increment': 230,
+            'proc_name': 'Disdain',
+            'proc_duration': 20,
+            'cooldown': 45,
+            'proc_type': 'chance_on_hit',
+            'proc_rate': 0.1,
         },
     },
     'madness': {
