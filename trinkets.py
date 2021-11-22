@@ -532,6 +532,104 @@ class BadgeOfTheSwarmguard(ProcTrinket):
 
         return 0.0
 
+class BlackenedNaaruSliver(ProcTrinket):
+    """Custom class to handle the unique behavior of stacking Sliver procs."""
+
+    def __init__(self):
+        """Initialize a Trinket object modeling Sliver.
+        """
+        ProcTrinket.__init__(
+            self, stat_name='attack_power', stat_increment=0,
+            proc_name='Battle Trance', proc_duration=20,
+            cooldown=45., chance_on_hit=0.1,
+            yellow_chance_on_hit=0.1
+        )
+
+    def reset(self):
+        """Full reset of the trinket at the start of a fight."""
+        self.activation_time = -np.inf
+        self._reset()
+        self.stat_increment = 0
+        self.num_procs = 0
+        self.uptime = 0.0
+        self.last_update = 0.0
+
+    def _reset(self):
+        self.active = False
+        self.can_proc = False
+        self.proc_happened = False
+        self.num_stacks = 0
+        self.proc_name = 'Battle Trance'
+        self.rates = {
+            'white': 0.1, 'yellow': 0.1
+        }
+
+    def deactivate(self, player, sim, time=None):
+        """Deactivate the trinket buff when the duration has expired.
+
+        Arguments:
+            player (tbc_cat_sim.Player): Player object whose attributes will be
+                restored to their original values.
+            sim (tbc_cat_sim.Simulation): Simulation object controlling the
+                fight execution.
+            time (float): Time at which the trinket is deactivated. Defaults to
+                the stored time for automatic deactivation.
+        """
+        # Temporarily change the stat increment to the total AP gained while
+        # the trinket was active
+        self.stat_increment = 44 * self.num_stacks
+
+        # Reset trinket to inactive state
+        self._reset()
+        Trinket.deactivate(self, player, sim, time=time)
+        self.stat_increment = 0
+
+    def apply_proc(self):
+        """Determine whether a new trinket activation takes place, or whether
+        a new stack is applied to an existing activation."""
+        # Ignore procs when at 10 stacks, and prevent future proc checks
+        if self.num_stacks == 10:
+            self.can_proc = False
+            return False
+
+        return ProcTrinket.apply_proc(self)
+
+    def activate(self, time, player, sim):
+        """Activate the trinket when off cooldown. If already active and a
+        trinket proc just occurred, then add a new stack of attack power.
+
+        Arguments:
+            time (float): Simulation time, in seconds, of activation.
+            player (tbc_cat_sim.Player): Player object whose attributes will be
+                modified by the trinket proc.
+            sim (tbc_cat_sim.Simulation): Simulation object controlling the
+                fight execution.
+        """
+        if not self.active:
+            # Activate the trinket on a fresh use
+            Trinket.activate(self, time, player, sim)
+            self.can_proc = True
+            self.proc_name = 'Combat Insight'
+            self.stat_increment = 44
+            # change proc rate to 100% on whites for the duration of the buff
+            self.rates = {
+                'white': 1.0, 'yellow': 0.0,
+            }
+        else:
+            # Apply a new battle trance stack. We do this "manually" rather than in the
+            # parent method because a new stack doesn't count as an actual
+            # activation.
+            self.modify_stat(time, player, sim, self.stat_increment)
+            self.num_stacks += 1
+
+            # Log if requested
+            if sim.log:
+                sim.combat_log.append(
+                    sim.gen_log(time, self.proc_name, 'applied')
+                )
+
+        return 0.0
+
 
 class PoisonVial(ProcTrinket):
     """Custom class to handle instant damage procs from the Romulo's Poison
@@ -883,6 +981,40 @@ trinket_library = {
         'passive_stats': {
             'attack_power': 56,
             'hit_chance': 20./15.77/100,
+        },
+    },
+    'alch': {
+        'type': 'passive',
+        'passive_stats': {
+            'strength': 15,
+            'agility': 15,
+            'intellect': 15,
+            'spirit': 15,
+            'mana_pot_multi': 0.4,
+        },
+    },
+    'assassin_alch': {
+        'type': 'passive',
+        'passive_stats': {
+            'attack_power': 108,
+            'mana_pot_multi': 0.4,
+        },
+    },
+    'bns': {
+        'type': 'proc',
+        'passive_stats': {
+            'haste_rating': 54,
+        },
+        # none of the following values are actually used, they're hardcoded in the bns subclass
+        # they are just included here for, idk, edification
+        'active_stats': {
+            'stat_name': 'attack_power',
+            'stat_increment': 44,
+            'proc_name': 'Battle Trance',
+            'proc_duration': 20,
+            'cooldown': 45,
+            'proc_type': 'chance_on_hit',
+            'proc_rate': 0.1,
         },
     },
 }

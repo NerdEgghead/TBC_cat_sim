@@ -261,6 +261,7 @@ class Player():
         self.jow = jow
         self.pot = pot
         self.cheap_pot = cheap_pot
+        self.mana_pot_multi = 1.0
         self.rune = rune
         self.t4_bonus = t4_bonus
         self.bonus_damage = bonus_damage
@@ -326,11 +327,11 @@ class Player():
         # or the number of shift cycles completed in that time.
 
         if self.cheap_pot:
-            self.pot_threshold = self.mana_pool - 3000
+            self.pot_threshold = self.mana_pool - 3000*self.mana_pot_multi
             return
 
         self.pot_threshold = self.mana_pool - 36 * (
-            400./3 + self.regen_rates['five_second_rule'] / 2
+            400./3*self.mana_pot_multi + self.regen_rates['five_second_rule'] / 2
             + 37. * (1./self.swing_timer + 2./5) - self.shift_cost/5
         )
 
@@ -510,7 +511,7 @@ class Player():
                 False.
         """
         if pot:
-            regen = 400
+            regen = 400 * self.mana_pot_multi
         elif self.innervated:
             regen = self.regen_rates['innervated']
         elif self.five_second_rule:
@@ -552,7 +553,7 @@ class Player():
 
         # If we're using cheap potions, we ignore the Fel Mana tick logic
         if self.cheap_pot:
-            self.mana += (1800 + np.random.rand() * 1200)
+            self.mana += (1800 + np.random.rand() * 1200)*self.mana_pot_multi
         else:
             self.pot_active = True
             self.pot_ticks = list(np.arange(time + 3, time + 24.01, 3))
@@ -1814,7 +1815,7 @@ class Simulation():
             dps_vals = self.run_replicates(num_replicates)
             base_dps = np.mean(dps_vals)
 
-        # For all stats, we will use a much larger increment than +1 in order 
+        # For all stats, we will use a much larger increment than +1 in order
         # to see sufficient DPS increases above the simulation noise. We will
         # then linearize the increase down to a +1 increment for weight
         # calculation. This approximation is accurate as long as DPS is linear
@@ -1899,7 +1900,7 @@ class Simulation():
             num_replicates, 'mana_pool', self.player.shift_cost, base_dps
         )
 
-        # For spirit weight, calculate how much spirit regens an additional 
+        # For spirit weight, calculate how much spirit regens an additional
         # full shift's worth of mana over the course of Innervate.
         base_regen_delta = self.player.shift_cost / 10 / 5
         spirit_delta = base_regen_delta / self.player.regen_factor

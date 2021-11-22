@@ -713,6 +713,9 @@ iteration_input = dbc.Col([
                 {'label': 'Steely Naaru Sliver', 'value': 'steely_naaru_sliver'},
                 {'label': 'Shard of Contempt', 'value': 'shard_of_contempt'},
                 {'label': "Berserker's Call", 'value': 'berserkers_call'},
+                {'label': "Alchemist's Stone", 'value': 'alch'},
+                {'label': "Assassin's Alchemist Stone", 'value': 'assassin_alch'},
+                {'label': 'Blackened Naaru Sliver', 'value': 'bns'},
             ],
             value='brooch'
         )),
@@ -742,6 +745,9 @@ iteration_input = dbc.Col([
                 {'label': 'Steely Naaru Sliver', 'value': 'steely_naaru_sliver'},
                 {'label': 'Shard of Contempt', 'value': 'shard_of_contempt'},
                 {'label': "Berserker's Call", 'value': 'berserkers_call'},
+                {'label': "Alchemist's Stone", 'value': 'alch'},
+                {'label': "Assassin's Alchemist Stone", 'value': 'assassin_alch'},
+                {'label': 'Blackened Naaru Sliver', 'value': 'bns'},
             ],
             value='tsunami'
         )),
@@ -1098,8 +1104,25 @@ def process_trinkets(trinket_1, trinket_2, player, ap_mod, stat_mod, cd_delay):
         trinket_params = copy.deepcopy(trinkets.trinket_library[trinket])
 
         for stat, increment in trinket_params['passive_stats'].items():
+            if stat == 'intellect':
+                increment *= 1.2 # hardcode the HotW 20% increase
+            if stat in ['strength', 'agility', 'intellect', 'spirit']:
+                increment *= stat_mod
+            if stat == 'strength':
+                increment *= 2
+                stat = 'attack_power'
+            if stat == 'agility':
+                stat = 'attack_power'
+                # additionally modify crit here
+                setattr(player, 'crit_chance', getattr(player, 'crit_chance') + increment/25./100.)
             if stat == 'attack_power':
                 increment *= ap_mod
+            if stat == 'haste_rating':
+                new_swing_timer = ccs.calc_swing_timer(
+                    ccs.calc_haste_rating(player.swing_timer) + increment,
+                )
+                player.swing_timer = new_swing_timer
+                continue
 
             setattr(player, stat, getattr(player, stat) + increment)
 
@@ -1161,6 +1184,8 @@ def process_trinkets(trinket_1, trinket_2, player, ap_mod, stat_mod, cd_delay):
                     active_stats['chance_on_hit'],
                     active_stats['yellow_chance_on_hit']
                 )
+            elif trinket == 'bns':
+                trinket_obj = trinkets.BlackenedNaaruSliver()
             elif trinket_params['type'] == 'refreshing_proc':
                 trinket_obj = trinkets.RefreshingProcTrinket(**active_stats)
             else:
