@@ -611,9 +611,9 @@ class BlackenedNaaruSliver(ProcTrinket):
             self.can_proc = True
             self.proc_name = 'Combat Insight'
             self.stat_increment = 44
-            # change proc rate to 100% on whites for the duration of the buff
+            # change proc rate to 100% for the duration of the buff
             self.rates = {
-                'white': 1.0, 'yellow': 0.0,
+                'white': 1.0, 'yellow': 1.0,
             }
         else:
             # Apply a new battle trance stack. We do this "manually" rather than in the
