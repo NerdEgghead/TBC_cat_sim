@@ -376,12 +376,16 @@ encounter_details = dbc.Col(
          value=[], id='raven_idol'
      ),
      dbc.Checklist(
-         options=[{'label': 'Everbloom Idol', 'value': 'everbloom'},
-                  {'label': '2-piece Tier 4 bonus', 'value': 't4_bonus'},
-                  {'label': '4-piece Tier 5 bonus', 'value': 't5_bonus'},
-                  {'label': '2-piece Tier 6 bonus', 'value': 't6_2p'},
-                  {'label': '4-piece Tier 6 bonus', 'value': 't6_4p'}],
-         value=['everbloom', 't5_bonus'],
+         options=[
+                     {'label': 'Everbloom Idol', 'value': 'everbloom'},
+                     {'label': '2-piece Tier 4 bonus', 'value': 't4_bonus'},
+                     {'label': '4-piece Tier 5 bonus', 'value': 't5_bonus'},
+                     {'label': '2-piece Tier 6 bonus', 'value': 't6_2p'},
+                     {'label': '4-piece Tier 6 bonus', 'value': 't6_4p'},
+                     {'label': 'Wolfshead Helm', 'value': 'wolfshead'},
+                     {'label': 'Relentless Earthstorm Diamond', 'value': 'meta'},
+                 ],
+         value=['everbloom', 't5_bonus', 'wolfshead'],
          id='bonuses'
      ),
      html.Br(),
@@ -1297,8 +1301,8 @@ def create_buffed_player(
         bonus_damage=bonus_weapon_damage, multiplier=damage_multiplier,
         jow='jow' in stat_debuffs, armor_pen=armor_pen,
         t4_bonus='t4_bonus' in bonuses, t6_2p='t6_2p' in bonuses,
-        t6_4p='t6_4p' in bonuses, rune='rune' in consumables,
-        pot=potion in ['super', 'fel'], cheap_pot=(potion == 'super'),
+        t6_4p='t6_4p' in bonuses, wolfshead='wolfshead' in bonuses, meta='meta' in bonuses,
+        rune='rune' in consumables, pot=potion in ['super', 'fel'], cheap_pot=(potion == 'super'),
         shred_bonus=shred_bonus
     )
     return player, ap_mod, stat_multiplier * 1.03

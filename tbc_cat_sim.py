@@ -9,7 +9,7 @@ import psutil
 import trinkets as trinks
 
 
-def calc_white_damage(low_end, high_end, miss_chance, crit_chance):
+def calc_white_damage(low_end, high_end, miss_chance, crit_chance, meta=False):
     """Execute single roll table for a melee white attack.
 
     Arguments:
@@ -34,11 +34,11 @@ def calc_white_damage(low_end, high_end, miss_chance, crit_chance):
         glance_reduction = 0.15 + np.random.rand() * 0.2
         return (1.0 - glance_reduction) * base_dmg, False, False
     if outcome_roll < miss_chance + 0.24 + crit_chance:
-        return 2.2 * base_dmg, False, True
+        return 2.2 * (1 + meta*0.03) * base_dmg, False, True
     return base_dmg, False, False
 
 
-def calc_yellow_damage(low_end, high_end, miss_chance, crit_chance):
+def calc_yellow_damage(low_end, high_end, miss_chance, crit_chance, meta=False):
     """Execute 2-roll table for a melee spell.
 
     Arguments:
@@ -61,7 +61,7 @@ def calc_yellow_damage(low_end, high_end, miss_chance, crit_chance):
     crit_roll = np.random.rand()
 
     if crit_roll < crit_chance:
-        return 2.2 * base_dmg, False, True
+        return 2.2 * (1 + meta*0.03) * base_dmg, False, True
     return base_dmg, False, False
 
 
@@ -189,9 +189,9 @@ class Player():
             self, attack_power, hit_chance, expertise_rating, crit_chance,
             armor_pen, swing_timer, mana, intellect, spirit, mp5, jow=False,
             pot=True, cheap_pot=False, rune=True, t4_bonus=False, t6_2p=False,
-            t6_4p=False, bonus_damage=0, shred_bonus=0, multiplier=1.1,
-            omen=True, feral_aggression=0, savage_fury=2,
-            natural_shapeshifter=3, intensity=3, weapon_speed=3.0,
+            t6_4p=False, wolfshead=True, meta=False, bonus_damage=0,
+            shred_bonus=0, multiplier=1.1, omen=True, feral_aggression=0,
+            savage_fury=2, natural_shapeshifter=3, intensity=3, weapon_speed=3.0,
             proc_trinkets=[], log=False
     ):
         """Initialize player with key damage parameters.
@@ -222,6 +222,9 @@ class Player():
                 False.
             t6_4p (bool): Whether the 4-piece T6 set bonus is used. Defaults
                 False.
+            wolfshead (bool): Whether Wolfshead is worn. Defaults to True.
+            meta (bool): Whether a Relentless Earthstorm Diamond meta gem is
+                socketed. Defaults to False.
             bonus_damage (int): Bonus weapon damage from buffs such as Bogling
                 Root or Dense Weightstone. Defaults to 0.
             shred_bonus (int): Bonus damage to Shred ability from Idols and set
@@ -268,6 +271,8 @@ class Player():
         self.shred_bonus = shred_bonus
         self.mangle_cost = 40 - 5 * t6_2p
         self.t6_bonus = t6_4p
+        self.wolfshead = wolfshead
+        self.meta = meta
         self.damage_multiplier = multiplier
         self.omen = omen
         self.feral_aggression = feral_aggression
@@ -568,7 +573,7 @@ class Player():
             damage_done (float): Damage done by the swing.
         """
         damage_done, miss, crit = calc_white_damage(
-            self.white_low, self.white_high, self.miss_chance, self.crit_chance
+            self.white_low, self.white_high, self.miss_chance, self.crit_chance, self.meta
         )
 
         # Check for Omen and JoW procs
@@ -639,7 +644,7 @@ class Player():
         """
         # Perform Monte Carlo
         damage_done, miss, crit = calc_yellow_damage(
-            min_dmg, max_dmg, self.miss_chance, self.crit_chance
+            min_dmg, max_dmg, self.miss_chance, self.crit_chance, self.meta
         )
 
         if mangle_mod:
@@ -727,7 +732,7 @@ class Player():
         damage_done, miss, crit = calc_yellow_damage(
             self.bite_low[self.combo_points] + bonus_damage,
             self.bite_high[self.combo_points] + bonus_damage, self.miss_chance,
-            self.crit_chance
+            self.crit_chance, self.meta
         )
 
         # Consume energy pool and combo points on successful Bite
@@ -795,7 +800,7 @@ class Player():
             time (float): Time at which the shift is executed, in seconds. Used
                 for determining the five second rule.
         """
-        self.energy = 60
+        self.energy = 40 + 20 * self.wolfshead
         self.gcd = 1.5
         self.dmg_breakdown['Shift']['casts'] += 1
         self.mana -= self.shift_cost
@@ -1258,7 +1263,7 @@ class Simulation():
             if time_to_next_tick > self.strategy['max_wait_time']:
                 self.innervate_or_shift(time)
         elif ((not rip_next) and
-              ((energy < mangle_cost - 20) or (not mangle_next))):
+              ((energy < mangle_cost - 20) or (not mangle_next and (mangle_cost == 40 or self.player.wolfshead)))):
             self.innervate_or_shift(time)
         elif time_to_next_tick > self.strategy['max_wait_time']:
             self.innervate_or_shift(time)
