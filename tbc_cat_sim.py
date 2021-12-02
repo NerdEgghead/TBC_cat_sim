@@ -1182,6 +1182,20 @@ class Simulation():
         mangle_next = (
             (not rip_next) and (mangle_now or (self.mangle_end <= next_tick))
         )
+        # 12/2/21 - Added wait_to_mangle parameter that tells us whether we
+        # should wait for the next Energy tick and cast Mangle, assuming we
+        # are less than a tick's worth of Energy from being able to cast it. In
+        # a standard Wolfshead rotation, wait_for_mangle is identical to
+        # mangle_next, i.e. we only wait for the tick if Mangle will have
+        # fallen off before the next tick. In a no-Wolfshead rotation, however,
+        # it is preferable to Mangle rather than Shred as the second special in
+        # a standard cycle, provided a bonus like 2pT6 is present to bring the
+        # Mangle Energy cost down to 38 or below so that it can be fit in
+        # alongside a Shred.
+        wait_to_mangle = (
+            mangle_next
+            or ((not self.player.wolfshead) and (mangle_cost <= 38))
+        )
         bite_before_rip_next = (
             bite_before_rip
             and (self.rip_end - next_tick >= self.strategy['bite_time'])
@@ -1262,8 +1276,8 @@ class Simulation():
                 return self.mangle(time)
             if time_to_next_tick > self.strategy['max_wait_time']:
                 self.innervate_or_shift(time)
-        elif ((not rip_next) and
-              ((energy < mangle_cost - 20) or (not mangle_next and (mangle_cost == 40 or self.player.wolfshead)))):
+        elif ((not rip_next)
+              and ((energy < mangle_cost - 20) or (not wait_to_mangle))):
             self.innervate_or_shift(time)
         elif time_to_next_tick > self.strategy['max_wait_time']:
             self.innervate_or_shift(time)
