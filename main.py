@@ -387,6 +387,10 @@ encounter_details = dbc.Col(
                          'label': 'Relentless Earthstorm Diamond',
                          'value': 'meta'
                      },
+                     {
+                         'label': 'Band of the Eternal Champion',
+                         'value': 'exalted_ring'
+                     },
                  ],
          value=['t6_2p', 't6_4p', 'wolfshead'],
          id='bonuses'
@@ -1625,6 +1629,20 @@ def compute(
         trinket_list.append(trinkets.ActivatedTrinket(
             'haste_rating', 80, 'Drums of Battle', 30, 120, delay=cd_delay
         ))
+
+    if 'exalted_ring' in bonuses:
+        ring_ppm = 1.0
+        ring = trinkets.ProcTrinket(
+            chance_on_hit = ring_ppm/60.,
+            yellow_chance_on_hit = ring_ppm/60. * player.weapon_speed,
+            stat_name = 'attack_power',
+            stat_increment = 160,
+            proc_duration = 10,
+            cooldown = 60,
+            proc_name = 'Band of the Eternal Champion',
+        )
+        trinket_list.append(ring)
+        player.proc_trinkets.append(ring)
 
     if potion == 'haste':
         haste_pot = trinkets.HastePotion(delay=cd_delay)
