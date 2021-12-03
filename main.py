@@ -32,7 +32,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=336, id='unbuffed_strength',
+            type='number', value=365, id='unbuffed_strength',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -48,7 +48,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=536, id='unbuffed_agi',
+            type='number', value=657, id='unbuffed_agi',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -64,7 +64,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=233, id='unbuffed_int',
+            type='number', value=252, id='unbuffed_int',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -80,7 +80,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            value=153, type='number', id='unbuffed_spirit',
+            value=151, type='number', id='unbuffed_spirit',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -97,7 +97,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=3070, id='unbuffed_attack_power',
+            type='number', value=3599, id='unbuffed_attack_power',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -113,7 +113,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=9, id='weapon_damage',
+            type='number', value=5, id='weapon_damage',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -129,7 +129,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=36.48, id='unbuffed_crit',
+            type='number', value=43.36, id='unbuffed_crit',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -153,7 +153,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=5.45, id='unbuffed_hit',
+            type='number', value=4.38, id='unbuffed_hit',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -193,7 +193,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=0, id='armor_pen',
+            type='number', value=175, id='armor_pen',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -209,7 +209,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=45, id='expertise_rating',
+            type='number', value=25, id='expertise_rating',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -249,7 +249,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            value=5585, type='number', id='unbuffed_mana',
+            value=5870, type='number', id='unbuffed_mana',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -321,7 +321,6 @@ buffs_1 = dbc.Col(
                   {'label': 'Battle Shout', 'value': 'bshout'}],
          value=[
              'kings', 'might', 'motw', 'str_totem', 'agi_totem', 'ai',
-             'spirit',
          ],
          id='raid_buffs'
      ),
@@ -347,7 +346,8 @@ buffs_1 = dbc.Col(
                           'label': 'Braided Eternium Chain',
                           'value': 'be_chain'
                       }],
-             value=['omen', 'be_chain'], id='other_buffs',
+             value=['lust', 'omen', 'heroic_presence', 'be_chain'],
+             id='other_buffs',
           ), width='auto'),
           dbc.Col(dbc.Input(
               value=2, type='number', id='num_mcp',
@@ -373,7 +373,7 @@ encounter_details = dbc.Col(
     [html.H5('Idols and Set Bonuses'),
      dbc.Checklist(
          options=[{'label': 'Idol of the Raven Goddess', 'value': 'raven'}],
-         value=[], id='raven_idol'
+         value=['raven'], id='raven_idol'
      ),
      dbc.Checklist(
          options=[
@@ -383,9 +383,12 @@ encounter_details = dbc.Col(
                      {'label': '2-piece Tier 6 bonus', 'value': 't6_2p'},
                      {'label': '4-piece Tier 6 bonus', 'value': 't6_4p'},
                      {'label': 'Wolfshead Helm', 'value': 'wolfshead'},
-                     {'label': 'Relentless Earthstorm Diamond', 'value': 'meta'},
+                     {
+                         'label': 'Relentless Earthstorm Diamond',
+                         'value': 'meta'
+                     },
                  ],
-         value=['everbloom', 't5_bonus', 'wolfshead'],
+         value=['t6_2p', 't6_4p', 'meta'],
          id='bonuses'
      ),
      html.Br(),
@@ -420,7 +423,8 @@ encounter_details = dbc.Col(
              {'label': 'Blood Frenzy', 'value': 'blood_frenzy'},
          ],
          value=[
-             'sunder', 'imp_EA', 'CoR', 'faerie_fire', 'blood_frenzy'
+             'gift_of_arthas', 'sunder', 'imp_EA', 'CoR', 'faerie_fire',
+             'blood_frenzy'
          ],
          id='boss_debuffs'
      ),
@@ -598,6 +602,7 @@ iteration_input = dbc.Col([
             ),
             dbc.Select(
                 options=[
+                    {'label': '3', 'value': 3},
                     {'label': '4', 'value': 4},
                     {'label': '5', 'value': 5},
                 ],
@@ -614,6 +619,7 @@ iteration_input = dbc.Col([
             ),
             dbc.Select(
                 options=[
+                    {'label': '3', 'value': 3},
                     {'label': '4', 'value': 4},
                     {'label': '5', 'value': 5},
                 ],
@@ -714,11 +720,17 @@ iteration_input = dbc.Col([
                 {'label': 'Crystalforged Trinket', 'value': 'crystalforged'},
                 {'label': 'Madness of the Betrayer', 'value': 'madness'},
                 {'label': "Romulo's Poison Vial", 'value': 'vial'},
-                {'label': 'Steely Naaru Sliver', 'value': 'steely_naaru_sliver'},
+                {
+                    'label': 'Steely Naaru Sliver',
+                    'value': 'steely_naaru_sliver'
+                },
                 {'label': 'Shard of Contempt', 'value': 'shard_of_contempt'},
                 {'label': "Berserker's Call", 'value': 'berserkers_call'},
                 {'label': "Alchemist's Stone", 'value': 'alch'},
-                {'label': "Assassin's Alchemist Stone", 'value': 'assassin_alch'},
+                {
+                    'label': "Assassin's Alchemist Stone",
+                    'value': 'assassin_alch'
+                },
                 {'label': 'Blackened Naaru Sliver', 'value': 'bns'},
             ],
             value='brooch'
@@ -746,11 +758,17 @@ iteration_input = dbc.Col([
                 {'label': 'Crystalforged Trinket', 'value': 'crystalforged'},
                 {'label': 'Madness of the Betrayer', 'value': 'madness'},
                 {'label': "Romulo's Poison Vial", 'value': 'vial'},
-                {'label': 'Steely Naaru Sliver', 'value': 'steely_naaru_sliver'},
+                {
+                    'label': 'Steely Naaru Sliver',
+                    'value': 'steely_naaru_sliver'
+                },
                 {'label': 'Shard of Contempt', 'value': 'shard_of_contempt'},
                 {'label': "Berserker's Call", 'value': 'berserkers_call'},
                 {'label': "Alchemist's Stone", 'value': 'alch'},
-                {'label': "Assassin's Alchemist Stone", 'value': 'assassin_alch'},
+                {
+                    'label': "Assassin's Alchemist Stone",
+                    'value': 'assassin_alch'
+                },
                 {'label': 'Blackened Naaru Sliver', 'value': 'bns'},
             ],
             value='tsunami'
@@ -1118,7 +1136,10 @@ def process_trinkets(trinket_1, trinket_2, player, ap_mod, stat_mod, cd_delay):
             if stat == 'agility':
                 stat = 'attack_power'
                 # additionally modify crit here
-                setattr(player, 'crit_chance', getattr(player, 'crit_chance') + increment/25./100.)
+                setattr(
+                    player, 'crit_chance',
+                    getattr(player, 'crit_chance') + increment / 25. / 100.
+                )
             if stat == 'attack_power':
                 increment *= ap_mod
             if stat == 'haste_rating':
@@ -1301,8 +1322,9 @@ def create_buffed_player(
         bonus_damage=bonus_weapon_damage, multiplier=damage_multiplier,
         jow='jow' in stat_debuffs, armor_pen=armor_pen,
         t4_bonus='t4_bonus' in bonuses, t6_2p='t6_2p' in bonuses,
-        t6_4p='t6_4p' in bonuses, wolfshead='wolfshead' in bonuses, meta='meta' in bonuses,
-        rune='rune' in consumables, pot=potion in ['super', 'fel'], cheap_pot=(potion == 'super'),
+        t6_4p='t6_4p' in bonuses, wolfshead='wolfshead' in bonuses,
+        meta='meta' in bonuses, rune='rune' in consumables,
+        pot=potion in ['super', 'fel'], cheap_pot=(potion == 'super'),
         shred_bonus=shred_bonus
     )
     return player, ap_mod, stat_multiplier * 1.03
