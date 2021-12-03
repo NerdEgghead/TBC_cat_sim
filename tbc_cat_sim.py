@@ -1158,11 +1158,13 @@ class Simulation():
         end_thresh = 10
         rip_now = (cp >= rip_cp) and (not self.rip_debuff)
         rip_now = rip_now and (self.fight_length - time >= end_thresh)
-        bite_at_end = ((cp >= bite_cp) and (
-            (self.fight_length - time < end_thresh)
-            or (self.rip_debuff and (
-                self.fight_length - self.rip_end < end_thresh))
-        ) and (not self.strategy['no_finisher'])
+        bite_at_end = (
+            (cp >= bite_cp) and (not self.strategy['no_finisher'])
+            and ((self.fight_length - time < end_thresh) or (
+                    self.rip_debuff and
+                    (self.fight_length - self.rip_end < end_thresh)
+                )
+            )
         )
 
         mangle_now = (not rip_now) and (not self.mangle_debuff)
@@ -1269,10 +1271,21 @@ class Simulation():
             elif time_to_next_tick > self.strategy['max_wait_time']:
                 self.innervate_or_shift(time)
         elif energy >= 22:
-            if (energy >= 42) or self.player.omen_proc:
+            if self.player.omen_proc:
                 return self.player.shred()
-            if ((energy >= mangle_cost) and (time_to_next_tick > 1.0)
+            # If our energy value is between 50-56 with 2pT6, or 60-61 without,
+            # and we are within 1 second of an Energy tick, then Shredding now
+            # forces us to shift afterwards, whereas we can instead cast two
+            # Mangles instead for higher cpm. This scenario is most relevant
+            # when using a no-Wolfshead rotation with 2pT6, and it will
+            # occur whenever the initial Shred on a cycle misses.
+            if ((energy >= 2*mangle_cost - 20) and (energy < 22 + mangle_cost)
+                    and (time_to_next_tick <= 1.0)
                     and self.strategy['use_mangle_trick']):
+                return self.mangle(time)
+            if energy >= 42:
+                return self.player.shred()
+            if (energy >= mangle_cost) and (time_to_next_tick > 1.0):
                 return self.mangle(time)
             if time_to_next_tick > self.strategy['max_wait_time']:
                 self.innervate_or_shift(time)
