@@ -336,7 +336,8 @@ class Player():
             return
 
         self.pot_threshold = self.mana_pool - 36 * (
-            400./3*self.mana_pot_multi + self.regen_rates['five_second_rule'] / 2
+            400./3 * self.mana_pot_multi
+            + self.regen_rates['five_second_rule'] / 2
             + 37. * (1./self.swing_timer + 2./5) - self.shift_cost/5
         )
 
@@ -380,11 +381,13 @@ class Player():
         # incorrect according to the DB.
         self.bite_low = {
             5: (902 + 0.25 * self.attack_power) * self.bite_multiplier,
-            4: (733 + 0.2 * self.attack_power) * self.bite_multiplier
+            4: (733 + 0.2 * self.attack_power) * self.bite_multiplier,
+            3: (564 + 0.15 * self.attack_power) * self.bite_multiplier,
         }
         self.bite_high = {
             5: (968 + 0.25 * self.attack_power) * self.bite_multiplier,
-            4: (799 + 0.2 * self.attack_power) * self.bite_multiplier
+            4: (799 + 0.2 * self.attack_power) * self.bite_multiplier,
+            3: (630 + 0.15 * self.attack_power) * self.bite_multiplier,
         }
         mangle_fac = 1 + 0.1 * self.savage_fury
         self.claw_low = mangle_fac * (self.white_low + 190 * self.multiplier)
@@ -401,7 +404,8 @@ class Player():
         # come from the DB, which matches in-game measurements.
         self.rip_tick = {
             5: (1554 + 0.24*self.attack_power) / 6 * rip_multiplier,
-            4: (1272 + 0.24*self.attack_power) / 6 * rip_multiplier
+            4: (1272 + 0.24*self.attack_power) / 6 * rip_multiplier,
+            3: (990 + 0.18*self.attack_power) / 6 * rip_multiplier,
         }
 
         # Adjust damage values for Gift of Arthas
