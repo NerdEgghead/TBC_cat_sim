@@ -378,6 +378,7 @@ encounter_details = dbc.Col(
      dbc.Checklist(
          options=[
                      {'label': 'Everbloom Idol', 'value': 'everbloom'},
+                     {'label': 'Idol of Terror', 'value': 'idol_of_terror'},
                      {'label': '2-piece Tier 4 bonus', 'value': 't4_bonus'},
                      {'label': '4-piece Tier 5 bonus', 'value': 't5_bonus'},
                      {'label': '2-piece Tier 6 bonus', 'value': 't6_2p'},
@@ -1643,6 +1644,20 @@ def compute(
         )
         trinket_list.append(ring)
         player.proc_trinkets.append(ring)
+    if 'idol_of_terror' in bonuses:
+        idol = trinkets.ProcTrinket(
+            chance_on_hit = 0.85,
+            stat_name = ['attack_power', 'crit_chance'],
+            stat_increment = np.array([
+                65. * stat_mod * ap_mod,
+                65. * stat_mod/25./100.,
+            ]),
+            proc_duration = 10,
+            cooldown = 10,
+            proc_name = 'Primal Instinct',
+        )
+        trinket_list.append(idol)
+        player.idol_of_terror = idol # don't like this, but it's awkward no matter how you slice it
 
     if potion == 'haste':
         haste_pot = trinkets.HastePotion(delay=cd_delay)

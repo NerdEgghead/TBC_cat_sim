@@ -188,9 +188,9 @@ class Player():
     def __init__(
             self, attack_power, hit_chance, expertise_rating, crit_chance,
             armor_pen, swing_timer, mana, intellect, spirit, mp5, jow=False,
-            pot=True, cheap_pot=False, rune=True, t4_bonus=False, t6_2p=False,
-            t6_4p=False, wolfshead=True, meta=False, bonus_damage=0,
-            shred_bonus=0, multiplier=1.1, omen=True, feral_aggression=0,
+            pot=True, cheap_pot=False, rune=True, idol_of_terror=None,
+            t4_bonus=False, t6_2p=False, t6_4p=False, wolfshead=True, meta=False,
+            bonus_damage=0, shred_bonus=0, multiplier=1.1, omen=True, feral_aggression=0,
             savage_fury=2, natural_shapeshifter=3, intensity=3, weapon_speed=3.0,
             proc_trinkets=[], log=False
     ):
@@ -216,6 +216,9 @@ class Player():
             cheap_pot (bool): Whether the budget Super Mana Potion is used
                 instead of the optimal Fel Mana Potion. Defaults False.
             rune (bool): Whether Dark/Demonic Runes are used. Defaults True.
+            idol_of_terror (?trinkets.ProcTrinket): Proc trinket that models
+                the Idol of Terror procs on mangles. Treated separately to other
+                proc trinkets, because it only procs on mangle. Defaults to None.
             t4_bonus (bool): Whether the 2-piece T4 set bonus is used. Defaults
                 False.
             t6_2p (bool): Whether the 2-piece T6 set bonus is used. Defaults
@@ -272,6 +275,7 @@ class Player():
         self.mangle_cost = 40 - 5 * t6_2p
         self.t6_bonus = t6_4p
         self.wolfshead = wolfshead
+        self.idol_of_terror = idol_of_terror
         self.meta = meta
         self.damage_multiplier = multiplier
         self.omen = omen
@@ -711,9 +715,13 @@ class Player():
             damage_done (float): Damage done by the Mangle cast.
             success (bool): Whether the Mangle debuff was successfully applied.
         """
-        return self.execute_builder(
+        dmg, success = self.execute_builder(
             'Mangle', self.mangle_low, self.mangle_high, self.mangle_cost
         )
+        if success and self.idol_of_terror:
+            # Crit is irrelevant to the Idol proc
+            self.idol_of_terror.check_for_proc(False, True)
+        return dmg, success
 
     def bite(self):
         """Execute a Ferocious Bite.
