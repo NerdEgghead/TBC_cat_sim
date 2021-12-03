@@ -32,7 +32,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=365, id='unbuffed_strength',
+            type='number', value=361, id='unbuffed_strength',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -48,7 +48,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=657, id='unbuffed_agi',
+            type='number', value=606, id='unbuffed_agi',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -64,7 +64,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=252, id='unbuffed_int',
+            type='number', value=242, id='unbuffed_int',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -80,7 +80,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            value=151, type='number', id='unbuffed_spirit',
+            value=161, type='number', id='unbuffed_spirit',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -97,7 +97,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=3599, id='unbuffed_attack_power',
+            type='number', value=3422, id='unbuffed_attack_power',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -129,7 +129,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=43.36, id='unbuffed_crit',
+            type='number', value=41.18, id='unbuffed_crit',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -153,7 +153,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=4.38, id='unbuffed_hit',
+            type='number', value=5.45, id='unbuffed_hit',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -193,7 +193,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            type='number', value=175, id='armor_pen',
+            type='number', value=0, id='armor_pen',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%'
@@ -249,7 +249,7 @@ stat_input = dbc.Col([
             }
         ),
         dbc.Input(
-            value=5870, type='number', id='unbuffed_mana',
+            value=5720, type='number', id='unbuffed_mana',
             style={
                 'width': '30%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
@@ -388,7 +388,7 @@ encounter_details = dbc.Col(
                          'value': 'meta'
                      },
                  ],
-         value=['t6_2p', 't6_4p', 'meta'],
+         value=['t6_2p', 't6_4p', 'wolfshead'],
          id='bonuses'
      ),
      html.Br(),
