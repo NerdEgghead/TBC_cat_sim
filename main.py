@@ -393,7 +393,7 @@ encounter_details = dbc.Col(
                          'value': 'exalted_ring'
                      },
                  ],
-         value=['t6_2p', 't6_4p', 'wolfshead'],
+         value=['t6_2p', 't6_4p', 'wolfshead', 'exalted_ring'],
          id='bonuses'
      ),
      html.Br(),
