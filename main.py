@@ -781,7 +781,9 @@ iteration_input = dbc.Col([
     ]),
     html.Div(
         'Make sure not to include passive trinket stats in the sim input.',
-        style={'marginTop': '2.5%'},
+        style={
+            'marginTop': '2.5%', 'fontSize': 'large', 'fontWeight': 'bold'
+        },
     ),
     html.Div([
         dbc.Button(
