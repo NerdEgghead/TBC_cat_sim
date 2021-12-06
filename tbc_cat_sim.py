@@ -17,6 +17,8 @@ def calc_white_damage(low_end, high_end, miss_chance, crit_chance, meta=False):
         high_end (float): High end base damage of the swing.
         miss_chance (float): Probability that the swing is avoided.
         crit_chance (float): Probability of a critical strike.
+        meta (bool): Whether the Relentless Earthstorm Diamond meta-gem is
+            used. Defaults False.
 
     Returns:
         damage_done (float): Damage done by the swing.
@@ -34,11 +36,13 @@ def calc_white_damage(low_end, high_end, miss_chance, crit_chance, meta=False):
         glance_reduction = 0.15 + np.random.rand() * 0.2
         return (1.0 - glance_reduction) * base_dmg, False, False
     if outcome_roll < miss_chance + 0.24 + crit_chance:
-        return 2.2 * (1 + meta*0.03) * base_dmg, False, True
+        return 2.2 * (1 + meta * 0.03) * base_dmg, False, True
     return base_dmg, False, False
 
 
-def calc_yellow_damage(low_end, high_end, miss_chance, crit_chance, meta=False):
+def calc_yellow_damage(
+    low_end, high_end, miss_chance, crit_chance, meta=False
+):
     """Execute 2-roll table for a melee spell.
 
     Arguments:
@@ -46,6 +50,8 @@ def calc_yellow_damage(low_end, high_end, miss_chance, crit_chance, meta=False):
         high_end (float): High end base damage of the ability.
         miss_chance (float): Probability that the ability is avoided.
         crit_chance (float): Probability of a critical strike.
+        meta (bool): Whether the Relentless Earthstorm Diamond meta-gem is
+            used. Defaults False.
 
     Returns:
         damage_done (float): Damage done by the ability.
@@ -61,7 +67,7 @@ def calc_yellow_damage(low_end, high_end, miss_chance, crit_chance, meta=False):
     crit_roll = np.random.rand()
 
     if crit_roll < crit_chance:
-        return 2.2 * (1 + meta*0.03) * base_dmg, False, True
+        return 2.2 * (1 + meta * 0.03) * base_dmg, False, True
     return base_dmg, False, False
 
 
@@ -188,11 +194,11 @@ class Player():
     def __init__(
             self, attack_power, hit_chance, expertise_rating, crit_chance,
             armor_pen, swing_timer, mana, intellect, spirit, mp5, jow=False,
-            pot=True, cheap_pot=False, rune=True, idol_of_terror=None,
-            t4_bonus=False, t6_2p=False, t6_4p=False, wolfshead=True, meta=False,
-            bonus_damage=0, shred_bonus=0, multiplier=1.1, omen=True, feral_aggression=0,
-            savage_fury=2, natural_shapeshifter=3, intensity=3, weapon_speed=3.0,
-            proc_trinkets=[], log=False
+            pot=True, cheap_pot=False, rune=True, t4_bonus=False, t6_2p=False,
+            t6_4p=False, wolfshead=True, meta=False, bonus_damage=0,
+            shred_bonus=0, multiplier=1.1, omen=True, feral_aggression=0,
+            savage_fury=2, natural_shapeshifter=3, intensity=3,
+            weapon_speed=3.0, proc_trinkets=[], log=False
     ):
         """Initialize player with key damage parameters.
 
@@ -216,9 +222,6 @@ class Player():
             cheap_pot (bool): Whether the budget Super Mana Potion is used
                 instead of the optimal Fel Mana Potion. Defaults False.
             rune (bool): Whether Dark/Demonic Runes are used. Defaults True.
-            idol_of_terror (?trinkets.ProcTrinket): Proc trinket that models
-                the Idol of Terror procs on mangles. Treated separately to other
-                proc trinkets, because it only procs on mangle. Defaults to None.
             t4_bonus (bool): Whether the 2-piece T4 set bonus is used. Defaults
                 False.
             t6_2p (bool): Whether the 2-piece T6 set bonus is used. Defaults
@@ -275,7 +278,6 @@ class Player():
         self.mangle_cost = 40 - 5 * t6_2p
         self.t6_bonus = t6_4p
         self.wolfshead = wolfshead
-        self.idol_of_terror = idol_of_terror
         self.meta = meta
         self.damage_multiplier = multiplier
         self.omen = omen
@@ -512,8 +514,13 @@ class Player():
         self.check_jow_proc()
         self.check_t4_proc()
 
+        # Now check for all trinket procs that may occur. Only trinkets that
+        # can trigger on all possible abilities will be checked here. The
+        # handful of proc effects that trigger only on Mangle must be
+        # separately checked within the mangle() function.
         for trinket in self.proc_trinkets:
-            trinket.check_for_proc(crit, yellow)
+            if not trinket.mangle_only:
+                trinket.check_for_proc(crit, yellow)
 
     def regen_mana(self, pot=False):
         """Update player mana on a Spirit tick.
@@ -581,7 +588,8 @@ class Player():
             damage_done (float): Damage done by the swing.
         """
         damage_done, miss, crit = calc_white_damage(
-            self.white_low, self.white_high, self.miss_chance, self.crit_chance, self.meta
+            self.white_low, self.white_high, self.miss_chance,
+            self.crit_chance, self.meta
         )
 
         # Check for Omen and JoW procs
@@ -718,9 +726,14 @@ class Player():
         dmg, success = self.execute_builder(
             'Mangle', self.mangle_low, self.mangle_high, self.mangle_cost
         )
-        if success and self.idol_of_terror:
-            # Crit is irrelevant to the Idol proc
-            self.idol_of_terror.check_for_proc(False, True)
+
+        # Since a handful of proc effects trigger only on Mangle, we separately
+        # check for those procs here if the Mangle landed successfully.
+        if success:
+            for trinket in self.proc_trinkets:
+                if trinket.mangle_only:
+                    trinket.check_for_proc(False, True)
+
         return dmg, success
 
     def bite(self):

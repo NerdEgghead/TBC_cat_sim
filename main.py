@@ -720,7 +720,11 @@ iteration_input = dbc.Col([
                 {'label': 'Badge of Tenacity', 'value': 'tenacity'},
                 {
                     'label': 'Living Root of the Wildheart',
-                    'value': 'class_trinket',
+                    'value': 'wildheart',
+                },
+                {
+                    'label': 'Ashtongue Talisman of Equilibrium',
+                    'value': 'ashtongue',
                 },
                 {'label': 'Crystalforged Trinket', 'value': 'crystalforged'},
                 {'label': 'Madness of the Betrayer', 'value': 'madness'},
@@ -758,7 +762,11 @@ iteration_input = dbc.Col([
                 {'label': 'Badge of Tenacity', 'value': 'tenacity'},
                 {
                     'label': 'Living Root of the Wildheart',
-                    'value': 'class_trinket',
+                    'value': 'wildheart',
+                },
+                {
+                    'label': 'Ashtongue Talisman of Equilibrium',
+                    'value': 'ashtongue',
                 },
                 {'label': 'Crystalforged Trinket', 'value': 'crystalforged'},
                 {'label': 'Madness of the Betrayer', 'value': 'madness'},
@@ -1636,30 +1644,25 @@ def compute(
     if 'exalted_ring' in bonuses:
         ring_ppm = 1.0
         ring = trinkets.ProcTrinket(
-            chance_on_hit = ring_ppm/60.,
-            yellow_chance_on_hit = ring_ppm/60. * player.weapon_speed,
-            stat_name = 'attack_power',
-            stat_increment = 160,
-            proc_duration = 10,
-            cooldown = 60,
-            proc_name = 'Band of the Eternal Champion',
+            chance_on_hit=ring_ppm / 60.,
+            yellow_chance_on_hit=ring_ppm / 60. * player.weapon_speed,
+            stat_name='attack_power', stat_increment=160, proc_duration=10,
+            cooldown=60, proc_name='Band of the Eternal Champion',
         )
         trinket_list.append(ring)
         player.proc_trinkets.append(ring)
     if 'idol_of_terror' in bonuses:
         idol = trinkets.ProcTrinket(
-            chance_on_hit = 0.85,
-            stat_name = ['attack_power', 'crit_chance'],
-            stat_increment = np.array([
+            chance_on_hit=0.85, stat_name=['attack_power', 'crit_chance'],
+            stat_increment=np.array([
                 65. * stat_mod * ap_mod,
-                65. * stat_mod/25./100.,
+                65. * stat_mod / 25. / 100.,
             ]),
-            proc_duration = 10,
-            cooldown = 10,
-            proc_name = 'Primal Instinct',
+            proc_duration=10, cooldown=10, proc_name='Primal Instinct',
+            mangle_only=True
         )
         trinket_list.append(idol)
-        player.idol_of_terror = idol # don't like this, but it's awkward no matter how you slice it
+        player.proc_trinkets.append(idol)
 
     if potion == 'haste':
         haste_pot = trinkets.HastePotion(delay=cd_delay)

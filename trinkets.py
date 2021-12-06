@@ -343,7 +343,8 @@ class ProcTrinket(Trinket):
 
     def __init__(
         self, stat_name, stat_increment, proc_name, chance_on_hit,
-        proc_duration, cooldown, chance_on_crit=0.0, yellow_chance_on_hit=None
+        proc_duration, cooldown, chance_on_crit=0.0, yellow_chance_on_hit=None,
+        mangle_only=False
     ):
         """Initialize a generic proc trinket with key parameters.
 
@@ -366,6 +367,8 @@ class ProcTrinket(Trinket):
                 interpreted as the proc rate for white attacks. Used for ppm
                 trinkets where white and yellow proc rates are normalized
                 differently.
+            mangle_only (bool): If True, then designate this trinket as being
+                able to proc exclusively on the Mangle ability. Defaults False.
             proc_duration (int): Duration of the buff, in seconds.
             cooldown (int): Internal cooldown before the trinket can proc
                 again.
@@ -384,6 +387,8 @@ class ProcTrinket(Trinket):
             self.chance_on_hit = chance_on_hit
             self.chance_on_crit = chance_on_crit
             self.separate_yellow_procs = False
+
+        self.mangle_only = mangle_only
 
     def check_for_proc(self, crit, yellow):
         """Perform random roll for a trinket proc upon a successful attack.
@@ -920,7 +925,7 @@ trinket_library = {
             'proc_rate': 1.,
         },
     },
-    'class_trinket': {
+    'wildheart': {
         'type': 'refreshing_proc',
         'passive_stats': {},
         'active_stats': {
@@ -931,6 +936,20 @@ trinket_library = {
             'cooldown': 0,
             'proc_type': 'chance_on_hit',
             'proc_rate': 0.03,
+        },
+    },
+    'ashtongue': {
+        'type': 'refreshing_proc',
+        'passive_stats': {},
+        'active_stats': {
+            'stat_name': 'Strength',
+            'stat_increment': 140,
+            'proc_name': 'Ashtongue Talisman of Equilibrium',
+            'proc_duration': 8,
+            'cooldown': 0,
+            'proc_type': 'chance_on_hit',
+            'proc_rate': 0.4,
+            'mangle_only': True,
         },
     },
     'steely_naaru_sliver': {
