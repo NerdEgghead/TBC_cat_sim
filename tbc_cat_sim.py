@@ -385,15 +385,12 @@ class Player():
 
         # Tooltip low range base values for Bite are 935 and 766, but that's
         # incorrect according to the DB.
+        ap, bm = self.attack_power, self.bite_multiplier
         self.bite_low = {
-            5: (902 + 0.25 * self.attack_power) * self.bite_multiplier,
-            4: (733 + 0.2 * self.attack_power) * self.bite_multiplier,
-            3: (564 + 0.15 * self.attack_power) * self.bite_multiplier,
+            i: (169*i + 57 + 0.05 * i * ap) * bm for i in range(1,6)
         }
         self.bite_high = {
-            5: (968 + 0.25 * self.attack_power) * self.bite_multiplier,
-            4: (799 + 0.2 * self.attack_power) * self.bite_multiplier,
-            3: (630 + 0.15 * self.attack_power) * self.bite_multiplier,
+            i: (169*i + 123 + 0.05 * i * ap) * bm for i in range(1,6)
         }
         mangle_fac = 1 + 0.1 * self.savage_fury
         self.claw_low = mangle_fac * (self.white_low + 190 * self.multiplier)
@@ -404,6 +401,9 @@ class Player():
         self.mangle_high = mangle_fac * (
             self.white_high * 1.6 + 264 * self.multiplier
         )
+        rake_multi = mangle_fac * damage_multiplier
+        self.rake_hit = rake_multi * (78 + 0.01 * self.attack_power)
+        self.rake_tick = rake_multi * (36 + 0.02 * self.attack_power)
         rip_multiplier = damage_multiplier * (1 + 0.15 * self.t6_bonus)
 
         # Rip base values are just straight up wrong in tooltip, below numbers
@@ -451,7 +451,7 @@ class Player():
 
         for cast_type in [
             'Melee', 'Mangle', 'Shred', 'Rip', 'Claw', 'Ferocious Bite',
-            'Shift'
+            'Shift', 'Rake'
         ]:
             self.dmg_breakdown[cast_type] = {'casts': 0, 'damage': 0.0}
 
@@ -704,6 +704,17 @@ class Player():
             'Shred', self.shred_low, self.shred_high, 42, mangle_mod=True
         )
         return damage_done
+
+    def rake(self):
+        """Execute a Rake.
+
+        Returns:
+            damage_done (float): Damage done by the Rake cast.
+        """
+        damage_done, success = self.execute_builder(
+            'Rake', self.rake_hit, self.rake_hit, 35, mangle_mod=True
+        )
+        return damage_done, success
 
     def claw(self):
         """Execute a Claw.
@@ -965,6 +976,10 @@ class Simulation():
         'prepop_numticks': 2,
         'min_combos_for_rip': 4,
         'use_mangle_trick': True,
+        'use_rake_trick': False,
+        'use_bite_trick': False,
+        'bite_trick_cp': 2,
+        'bite_trick_max': 39,
         'use_bite': False,
         'bite_time': 4.0,
         'min_combos_for_bite': 4,
@@ -1144,6 +1159,26 @@ class Simulation():
 
         return damage_done
 
+    def rake(self, time):
+        """Instruct the Player to Rake, and perform related bookkeeping.
+
+        Arguments:
+            time (float): Current simulation time in seconds.
+
+        Returns:
+            damage_done (float): Damage done by the Rake initial hit.
+        """
+        damage_done, success = self.player.rake()
+
+        # If it landed, flag the debuff as active and start timer
+        if success:
+            self.rake_debuff = True
+            self.rake_end = time + 9.0
+            self.rake_ticks = list(np.arange(time + 3, time + 9.01, 3))
+            self.rake_damage = self.player.rake_tick
+
+        return damage_done
+
     def rip(self, time):
         """Instruct Player to apply Rip, and perform related bookkeeping.
 
@@ -1288,6 +1323,16 @@ class Simulation():
 
             if wait and (time_to_next_tick > self.strategy['max_wait_time']):
                 self.innervate_or_shift(time)
+        elif (energy >= 35 and energy <= self.strategy['bite_trick_max']
+              and self.strategy['use_bite_trick'] and time_to_next_tick > 1
+              and not self.player.omen_proc
+              and cp >= self.strategy['bite_trick_cp']):
+            return self.player.bite()
+        elif (energy >= 35 and energy < mangle_cost
+              and self.strategy['use_rake_trick'] and time_to_next_tick > 1
+              and not self.rake_debuff
+              and not self.player.omen_proc):
+            return self.rake(time)
         elif mangle_now:
             if (energy < mangle_cost - 20) and (not rip_next):
                 self.innervate_or_shift(time)
@@ -1306,7 +1351,10 @@ class Simulation():
             # occur whenever the initial Shred on a cycle misses.
             if ((energy >= 2*mangle_cost - 20) and (energy < 22 + mangle_cost)
                     and (time_to_next_tick <= 1.0)
-                    and self.strategy['use_mangle_trick']):
+                    and self.strategy['use_mangle_trick']
+                    and ((not self.strategy['use_rake_trick']
+                          and not self.strategy['use_bite_trick'])
+                         or mangle_cost == 35)):
                 return self.mangle(time)
             if energy >= 42:
                 return self.player.shred()
@@ -1411,6 +1459,7 @@ class Simulation():
         self.innervate_threshold = 2 * self.player.shift_cost + 95
         self.mangle_debuff = False
         self.rip_debuff = False
+        self.rake_debuff = False
 
         # Configure combat logging if requested
         self.log = log
@@ -1560,7 +1609,7 @@ class Simulation():
                     )
 
             # Check if a Rip tick happens at this time
-            if self.rip_debuff and (time == self.rip_ticks[0]):
+            if self.rip_debuff and (time >= self.rip_ticks[0]):
                 tick_damage = self.rip_damage * (1 + 0.3 * self.mangle_debuff)
                 dmg_done += tick_damage
                 rip_damage += tick_damage
@@ -1578,6 +1627,27 @@ class Simulation():
                 if self.log:
                     self.combat_log.append(
                         self.gen_log(self.rip_end, 'Rip', 'falls off')
+                    )
+
+            # Check if a Rake tick happens at this time
+            if self.rake_debuff and (time >= self.rake_ticks[0]):
+                tick_damage = self.rake_damage * (1 + 0.3 * self.mangle_debuff)
+                dmg_done += tick_damage
+                self.player.dmg_breakdown['Rake']['damage'] += tick_damage
+                self.rake_ticks.pop(0)
+
+                if self.log:
+                    self.combat_log.append(
+                        self.gen_log(time, 'Rake tick', '%d' % tick_damage)
+                    )
+
+            # Check if Rake fell off
+            if self.rake_debuff and (time > self.rake_end - 1e-9):
+                self.rake_debuff = False
+
+                if self.log:
+                    self.combat_log.append(
+                        self.gen_log(self.rake_end, 'Rake', 'falls off')
                     )
 
             # Activate or deactivate trinkets if appropriate
