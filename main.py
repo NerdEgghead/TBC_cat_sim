@@ -379,6 +379,7 @@ encounter_details = dbc.Col(
          options=[
                      {'label': 'Everbloom Idol', 'value': 'everbloom'},
                      {'label': 'Idol of Terror', 'value': 'idol_of_terror'},
+                     {'label': 'Idol of the White Stag', 'value': 'stag_idol'},
                      {'label': '2-piece Tier 4 bonus', 'value': 't4_bonus'},
                      {'label': '4-piece Tier 5 bonus', 'value': 't5_bonus'},
                      {'label': '2-piece Tier 6 bonus', 'value': 't6_2p'},
@@ -1142,7 +1143,7 @@ def process_trinkets(trinket_1, trinket_2, player, ap_mod, stat_mod, cd_delay):
 
         for stat, increment in trinket_params['passive_stats'].items():
             if stat == 'intellect':
-                increment *= 1.2 # hardcode the HotW 20% increase
+                increment *= 1.2  # hardcode the HotW 20% increase
             if stat in ['strength', 'agility', 'intellect', 'spirit']:
                 increment *= stat_mod
             if stat == 'strength':
@@ -1646,8 +1647,9 @@ def compute(
         ring = trinkets.ProcTrinket(
             chance_on_hit=ring_ppm / 60.,
             yellow_chance_on_hit=ring_ppm / 60. * player.weapon_speed,
-            stat_name='attack_power', stat_increment=160, proc_duration=10,
-            cooldown=60, proc_name='Band of the Eternal Champion',
+            stat_name='attack_power', stat_increment=160 * ap_mod,
+            proc_duration=10, cooldown=60,
+            proc_name='Band of the Eternal Champion',
         )
         trinket_list.append(ring)
         player.proc_trinkets.append(ring)
@@ -1660,6 +1662,14 @@ def compute(
             ]),
             proc_duration=10, cooldown=10, proc_name='Primal Instinct',
             mangle_only=True
+        )
+        trinket_list.append(idol)
+        player.proc_trinkets.append(idol)
+    if 'stag_idol' in bonuses:
+        idol = trinkets.RefreshingProcTrinket(
+            chance_on_hit=1.0, stat_name='attack_power',
+            stat_increment=94 * ap_mod, proc_duration=20, cooldown=0,
+            proc_name='Idol of the White Stag', mangle_only=True
         )
         trinket_list.append(idol)
         player.proc_trinkets.append(idol)
