@@ -15,207 +15,61 @@ import tbc_cat_sim as ccs
 import multiprocessing
 import trinkets
 import copy
+import ast
+import json
 
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
 server = app.server
 
+default_input_stats = {
+    "agility": 587,
+    "arcaneDamage": 0,
+    "armor": 4048,
+    "attackPower": 3064,
+    "crit": 41.19,
+    "critRating": 127,
+    "critReduction": 3,
+    "defense": 352,
+    "defenseRating": 5,
+    "dodge": 43.13,
+    "expertise": 11,
+    "expertiseRating": 45,
+    "feralAttackPower": 1010,
+    "fireDamage": 0,
+    "frostDamage": 0,
+    "haste": 0,
+    "healing": 0,
+    "health": 7974,
+    "hit": 5.71,
+    "hitRating": 90,
+    "holyDamage": 0,
+    "intellect": 197,
+    "mana": 5045,
+    "natureDamage": 0,
+    "natureResist": 10,
+    "parry": 5.08,
+    "resilience": 1,
+    "resilienceRating": 52,
+    "shadowDamage": 0,
+    "spellCrit": 4.31,
+    "spellDamage": 0,
+    "spellHaste": 0,
+    "spellHit": 0,
+    "spirit": 165,
+    "stamina": 454,
+    "strength": 227
+}
 
 stat_input = dbc.Col([
     html.H5('Unbuffed Cat Form Stats'),
-    html.Div([
-        html.Div(
-            'Strength:',
-            style={
-                'width': '40%', 'display': 'inline-block',
-                'fontWeight': 'bold'
-            }
-        ),
-        dbc.Input(
-            type='number', value=361, id='unbuffed_strength',
-            style={
-                'width': '30%', 'display': 'inline-block',
-                'marginBottom': '2.5%'
-            }
-        )
-    ]),
-    html.Div([
-        html.Div(
-            'Agility:',
-            style={
-                'width': '40%', 'display': 'inline-block',
-                'fontWeight': 'bold'
-            }
-        ),
-        dbc.Input(
-            type='number', value=606, id='unbuffed_agi',
-            style={
-                'width': '30%', 'display': 'inline-block',
-                'marginBottom': '2.5%'
-            }
-        )
-    ]),
-    html.Div([
-        html.Div(
-            'Intellect:',
-            style={
-                'width': '40%', 'display': 'inline-block',
-                'fontWeight': 'bold'
-            }
-        ),
-        dbc.Input(
-            type='number', value=242, id='unbuffed_int',
-            style={
-                'width': '30%', 'display': 'inline-block',
-                'marginBottom': '2.5%'
-            }
-        )
-    ]),
-    html.Div([
-        html.Div(
-            'Spirit:',
-            style={
-                'width': '40%', 'display': 'inline-block',
-                'marginBottom': '0%', 'fontWeight': 'bold'
-            }
-        ),
-        dbc.Input(
-            value=161, type='number', id='unbuffed_spirit',
-            style={
-                'width': '30%', 'display': 'inline-block',
-                'marginBottom': '2.5%', 'marginRight': '5%'
-            }
-        ),
-    ]),
-    html.Br(),
-    html.Div([
-        html.Div(
-            'Attack Power:',
-            style={
-                'width': '40%', 'display': 'inline-block',
-                'fontWeight': 'bold'
-            }
-        ),
-        dbc.Input(
-            type='number', value=3422, id='unbuffed_attack_power',
-            style={
-                'width': '30%', 'display': 'inline-block',
-                'marginBottom': '2.5%'
-            }
-        )
-    ]),
-    html.Div([
-        html.Div(
-            'Added Weapon Damage',
-            style={
-                'width': '40%', 'display': 'inline-block',
-                'fontWeight': 'bold'
-            }
-        ),
-        dbc.Input(
-            type='number', value=5, id='weapon_damage',
-            style={
-                'width': '30%', 'display': 'inline-block',
-                'marginBottom': '2.5%'
-            }
-        )
-    ]),
-    html.Div([
-        html.Div(
-            'Crit Chance:',
-            style={
-                'width': '40%', 'display': 'inline-block',
-                'marginBottom': '0%', 'fontWeight': 'bold'
-            }
-        ),
-        dbc.Input(
-            type='number', value=41.18, id='unbuffed_crit',
-            style={
-                'width': '30%', 'display': 'inline-block',
-                'marginBottom': '2.5%', 'marginRight': '5%'
-            },
-            min=0.0, max=100.0, step=0.01
-        ),
-        html.Div(
-            '%',
-            style={
-                'width': '25%', 'display': 'inline-block',
-                'textAlign': 'left'
-            }
-        )
-    ]),
-    html.Div([
-        html.Div(
-            'Hit Chance:',
-            style={
-                'width': '40%', 'display': 'inline-block',
-                'marginBottom': '0%', 'fontWeight': 'bold'
-            }
-        ),
-        dbc.Input(
-            type='number', value=5.45, id='unbuffed_hit',
-            style={
-                'width': '30%', 'display': 'inline-block',
-                'marginBottom': '2.5%', 'marginRight': '5%'
-            },
-            min=0.0, max=9.0, step=0.01
-        ),
-        html.Div(
-            '%',
-            style={
-                'width': '25%', 'display': 'inline-block',
-                'textAlign': 'left'
-            }
-        )
-    ]),
-    html.Div([
-        html.Div(
-            'Haste Rating:',
-            style={
-                'width': '40%', 'display': 'inline-block',
-                'fontWeight': 'bold'
-            }
-        ),
-        dbc.Input(
-            type='number', value=0, id='haste_rating',
-            style={
-                'width': '30%', 'display': 'inline-block',
-                'marginBottom': '2.5%'
-            }
-        )
-    ]),
-    html.Div([
-        html.Div(
-            'Armor Penetration:',
-            style={
-                'width': '40%', 'display': 'inline-block',
-                'fontWeight': 'bold'
-            }
-        ),
-        dbc.Input(
-            type='number', value=0, id='armor_pen',
-            style={
-                'width': '30%', 'display': 'inline-block',
-                'marginBottom': '2.5%'
-            }
-        )
-    ]),
-    html.Div([
-        html.Div(
-            'Expertise Rating:',
-            style={
-                'width': '40%', 'display': 'inline-block',
-                'fontWeight': 'bold'
-            }
-        ),
-        dbc.Input(
-            type='number', value=25, id='expertise_rating',
-            style={
-                'width': '30%', 'display': 'inline-block',
-                'marginBottom': '2.5%'
-            }
-        )
-    ]),
+    dbc.Textarea(
+        id='stats_json', value=json.dumps(default_input_stats, indent=0),
+        style={
+            'width': '100%', 'height': 900, 'marginBottom': '5%',
+            'background': '#444444', 'color': '#ffffff'
+        },
+    ),
     html.Div([
         html.Div(
             'Equipped weapon speed:',
@@ -239,38 +93,6 @@ stat_input = dbc.Col([
                 'textAlign': 'left'
             }
         )
-    ]),
-    html.Div([
-        html.Div(
-            'Mana:',
-            style={
-                'width': '40%', 'display': 'inline-block',
-                'marginBottom': '0%', 'fontWeight': 'bold'
-            }
-        ),
-        dbc.Input(
-            value=5720, type='number', id='unbuffed_mana',
-            style={
-                'width': '30%', 'display': 'inline-block',
-                'marginBottom': '2.5%', 'marginRight': '5%'
-            }
-        ),
-    ]),
-    html.Div([
-        html.Div(
-            'MP5:',
-            style={
-                'width': '40%', 'display': 'inline-block',
-                'marginBottom': '0%', 'fontWeight': 'bold'
-            }
-        ),
-        dbc.Input(
-            value=0, type='number', id='unbuffed_mp5',
-            style={
-                'width': '30%', 'display': 'inline-block',
-                'marginBottom': '2.5%', 'marginRight': '5%'
-            }
-        ),
     ]),
     ], width='auto', style={'marginBottom': '2.5%', 'marginLeft': '2.5%'})
 
@@ -320,14 +142,14 @@ buffs_1 = dbc.Col(
                   {'label': 'Blessing of Wisdom', 'value': 'wisdom'},
                   {'label': 'Battle Shout', 'value': 'bshout'}],
          value=[
-             'kings', 'might', 'motw', 'str_totem', 'agi_totem', 'ai',
+             'kings', 'might', 'motw', 'str_totem', 'agi_totem', 'ai', 'bshout'
          ],
          id='raid_buffs'
      ),
      dbc.Checklist(
          options=[{'label': 'Commanding Presence', 'value': 'talent'},
                   {'label': "Solarian's Sapphire", 'value': 'trinket'}],
-         value=[], id='bshout_options',
+         value=['talent'], id='bshout_options',
          style={'marginLeft': '5%'},
      ),
      html.Br(),
@@ -346,7 +168,7 @@ buffs_1 = dbc.Col(
                           'label': 'Braided Eternium Chain',
                           'value': 'be_chain'
                       }],
-             value=['lust', 'omen', 'heroic_presence', 'be_chain'],
+             value=['lust', 'drums', 'omen', 'unleashed_rage'],
              id='other_buffs',
           ), width='auto'),
           dbc.Col(dbc.Input(
@@ -360,7 +182,7 @@ buffs_1 = dbc.Col(
                  'Ferocious Inspiration stacks:', addon_type='prepend'
              ),
              dbc.Input(
-                 value=2, type='number', id='ferocious_inspiration', min=0,
+                 value=0, type='number', id='ferocious_inspiration', min=0,
                  max=4
              )
          ],
@@ -444,7 +266,7 @@ encounter_details = dbc.Col(
              {'label': 'Judgment of Wisdom', 'value': 'jow'},
              {'label': 'Expose weakness', 'value': 'expose'},
          ],
-         value=['imp_ff', 'hunters_mark', 'jow', 'expose'],
+         value=['imp_ff', 'hunters_mark', 'jotc', 'jow', 'expose'],
          id='stat_debuffs',
      ),
      dbc.InputGroup(
@@ -1536,19 +1358,8 @@ def plot_new_trajectory(sim, show_whites):
     Output('import_link', 'children'),
     Output('energy_flow', 'figure'),
     Output('combat_log', 'children'),
-    Input('unbuffed_strength', 'value'),
-    Input('unbuffed_agi', 'value'),
-    Input('unbuffed_int', 'value'),
-    Input('unbuffed_spirit', 'value'),
-    Input('unbuffed_attack_power', 'value'),
-    Input('unbuffed_crit', 'value'),
-    Input('unbuffed_hit', 'value'),
-    Input('haste_rating', 'value'),
-    Input('armor_pen', 'value'),
-    Input('expertise_rating', 'value'),
+    Input('stats_json', 'value'),
     Input('unbuffed_weapon_speed', 'value'),
-    Input('unbuffed_mana', 'value'),
-    Input('unbuffed_mp5', 'value'),
     Input('consumables', 'value'),
     Input('raid_buffs', 'value'),
     Input('bshout_options', 'value'),
@@ -1562,7 +1373,6 @@ def plot_new_trajectory(sim, show_whites):
     Input('run_button', 'n_clicks'),
     Input('weight_button', 'n_clicks'),
     Input('graph_button', 'n_clicks'),
-    State('weapon_damage', 'value'),
     State('potion', 'value'),
     State('ferocious_inspiration', 'value'),
     State('bonuses', 'value'),
@@ -1590,12 +1400,9 @@ def plot_new_trajectory(sim, show_whites):
     State('calc_mana_weights', 'checked'),
     State('show_whites', 'checked'))
 def compute(
-        unbuffed_strength, unbuffed_agi, unbuffed_int, unbuffed_spirit,
-        unbuffed_ap, unbuffed_crit, unbuffed_hit, haste_rating, armor_pen,
-        expertise_rating, weapon_speed, unbuffed_mana, unbuffed_mp5,
-        consumables, raid_buffs, bshout_options, num_mcp, other_buffs,
-        raven_idol, stat_debuffs, surv_agi, trinket_1, trinket_2, run_clicks,
-        weight_clicks, graph_clicks, weapon_damage, potion,
+        stats_json, weapon_speed, consumables, raid_buffs, bshout_options,
+        num_mcp, other_buffs, raven_idol, stat_debuffs, surv_agi, trinket_1,
+        trinket_2, run_clicks, weight_clicks, graph_clicks, potion,
         ferocious_inspiration, bonuses, feral_aggression, savage_fury,
         naturalist, natural_shapeshifter, intensity, fight_length, boss_armor,
         boss_debuffs, finisher, rip_cp, bite_cp, max_wait_time, cd_delay,
@@ -1603,6 +1410,26 @@ def compute(
         bite_time, bear_mangle, num_replicates, calc_mana_weights, show_whites
 ):
     ctx = dash.callback_context
+
+    # Parse input stats JSON
+    try:
+        input_stats = ast.literal_eval(stats_json)
+    except Exception:
+        input_stats = {}
+
+    unbuffed_strength = input_stats.get('strength', 0)
+    unbuffed_agi = input_stats.get('agility', 0)
+    unbuffed_int = input_stats.get('intellect', 0)
+    unbuffed_spirit = input_stats.get('spirit', 0)
+    unbuffed_ap = input_stats.get('attackPower', 0)
+    unbuffed_crit = input_stats.get('crit', 0.0)
+    unbuffed_hit = input_stats.get('hit', 0.0)
+    haste_rating = input_stats.get('hasteRating', 0)
+    expertise_rating = input_stats.get('expertiseRating', 0)
+    armor_pen = input_stats.get('armorPen', 0)
+    weapon_damage = input_stats.get('weaponDamage', 0)
+    unbuffed_mana = input_stats.get('mana', 0)
+    unbuffed_mp5 = input_stats.get('mp5', 0)
 
     # Create Player object based on specified stat inputs and talents
     player, ap_mod, stat_mod = create_buffed_player(
@@ -1723,5 +1550,5 @@ def compute(
 if __name__ == '__main__':
     multiprocessing.freeze_support()
     app.run_server(
-        host='0.0.0.0', port=8080, debug=False
+        host='0.0.0.0', port=8080, debug=True
     )
