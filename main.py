@@ -678,6 +678,27 @@ iteration_input = dbc.Col([
         value=['use_mangle_trick'], id='use_mangle_trick'
     ),
     dbc.Checklist(
+        options=[{'label': ' use Rake trick', 'value': 'use_rake_trick'}],
+        value=[], id='use_rake_trick'
+    ),
+    dbc.Row([
+        dbc.Col(dbc.Checklist(
+            options=[{'label': ' use Bite trick', 'value': 'use_bite_trick'}],
+            value=[], id='use_bite_trick'
+        ), width='auto'),
+        dbc.Col('with at least', width='auto'),
+        dbc.Col(dbc.Select(
+            options=[{'label':  i, 'value': i} for i in range(1, 6)],
+            value=2, id='bite_trick_cp',
+            style={'marginTop': '-7%'},
+        ), width='auto'),
+        dbc.Col('combo points, and an energy range up to', width='auto'),
+        dbc.Col(dbc.Input(
+            type='number', value=39, id='bite_trick_max', min=35, step=1,
+            style={'marginTop': '-7%', 'width': '40%'},
+        ), width='auto'),
+    ]),
+    dbc.Checklist(
         options=[{'label': ' use Innervate', 'value': 'use_innervate'}],
         value=[], id='use_innervate'
     ),
@@ -692,7 +713,7 @@ iteration_input = dbc.Col([
             style={'marginTop': '-7%', 'width': '40%'},
         ), width='auto'),
         dbc.Col(
-            'seconds left on Rip', width='auto', style={'marginLeft': '-20%'}
+            'seconds left on Rip', width='auto', style={'marginLeft': '-15%'}
         )
     ],),
     dbc.Checklist(
@@ -1582,6 +1603,10 @@ def plot_new_trajectory(sim, show_whites):
     State('prepop_TF', 'value'),
     State('prepop_numticks', 'value'),
     State('use_mangle_trick', 'value'),
+    State('use_rake_trick', 'value'),
+    State('use_bite_trick', 'value'),
+    State('bite_trick_cp', 'value'),
+    State('bite_trick_max', 'value'),
     State('use_innervate', 'value'),
     State('use_bite', 'value'),
     State('bite_time', 'value'),
@@ -1599,8 +1624,10 @@ def compute(
         ferocious_inspiration, bonuses, feral_aggression, savage_fury,
         naturalist, natural_shapeshifter, intensity, fight_length, boss_armor,
         boss_debuffs, finisher, rip_cp, bite_cp, max_wait_time, cd_delay,
-        prepop_TF, prepop_numticks, use_mangle_trick, use_innervate, use_bite,
-        bite_time, bear_mangle, num_replicates, calc_mana_weights, show_whites
+        prepop_TF, prepop_numticks, use_mangle_trick, use_rake_trick,
+        use_bite_trick, bite_trick_cp, bite_trick_max, use_innervate,
+        use_bite, bite_time, bear_mangle, num_replicates, calc_mana_weights,
+        show_whites
 ):
     ctx = dash.callback_context
 
@@ -1684,6 +1711,9 @@ def compute(
         boss_armor=boss_armor, prepop_TF=bool(prepop_TF),
         prepop_numticks=int(prepop_numticks), min_combos_for_rip=rip_combos,
         min_combos_for_bite=int(bite_cp), use_innervate=bool(use_innervate),
+        use_rake_trick=bool(use_rake_trick),
+        use_bite_trick=bool(use_bite_trick), bite_trick_cp=int(bite_trick_cp),
+        bite_trick_max=bite_trick_max,
         use_mangle_trick=bool(use_mangle_trick), use_bite=bite,
         bite_time=bite_time, bear_mangle=bool(bear_mangle),
         trinkets=trinket_list, max_wait_time=max_wait_time, haste_pot=haste_pot
