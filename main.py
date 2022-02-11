@@ -15,344 +15,161 @@ import tbc_cat_sim as ccs
 import multiprocessing
 import trinkets
 import copy
+import json
+import base64
+import io
 
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
 server = app.server
 
+default_input_stats = {
+    "agility": 576,
+    "armor": 5058,
+    "attackPower": 3404,
+    "crit": 41.34,
+    "critRating": 140,
+    "critReduction": 3,
+    "defense": 350,
+    "dodge": 42.3,
+    "expertise": 6,
+    "expertiseRating": 25,
+    "feralAttackPower": 1110,
+    "health": 8754,
+    "hit": 5.45,
+    "hitRating": 86,
+    "intellect": 242,
+    "mainHandSpeed": 2,
+    "mana": 5720,
+    "natureResist": 10,
+    "parry": 5,
+    "resilience": 1.32,
+    "resilienceRating": 52,
+    "spellCrit": 4.88,
+    "spirit": 161,
+    "stamina": 532,
+    "strength": 398,
+    "weaponDamage": 5
+}
 
 stat_input = dbc.Col([
-    html.H5('Unbuffed Cat Form Stats'),
-    html.Div([
-        html.Div(
-            'Strength:',
-            style={
-                'width': '40%', 'display': 'inline-block',
-                'fontWeight': 'bold'
-            }
-        ),
-        dbc.Input(
-            type='number', value=361, id='unbuffed_strength',
-            style={
-                'width': '30%', 'display': 'inline-block',
-                'marginBottom': '2.5%'
-            }
-        )
-    ]),
-    html.Div([
-        html.Div(
-            'Agility:',
-            style={
-                'width': '40%', 'display': 'inline-block',
-                'fontWeight': 'bold'
-            }
-        ),
-        dbc.Input(
-            type='number', value=606, id='unbuffed_agi',
-            style={
-                'width': '30%', 'display': 'inline-block',
-                'marginBottom': '2.5%'
-            }
-        )
-    ]),
-    html.Div([
-        html.Div(
-            'Intellect:',
-            style={
-                'width': '40%', 'display': 'inline-block',
-                'fontWeight': 'bold'
-            }
-        ),
-        dbc.Input(
-            type='number', value=242, id='unbuffed_int',
-            style={
-                'width': '30%', 'display': 'inline-block',
-                'marginBottom': '2.5%'
-            }
-        )
-    ]),
-    html.Div([
-        html.Div(
-            'Spirit:',
-            style={
-                'width': '40%', 'display': 'inline-block',
-                'marginBottom': '0%', 'fontWeight': 'bold'
-            }
-        ),
-        dbc.Input(
-            value=161, type='number', id='unbuffed_spirit',
-            style={
-                'width': '30%', 'display': 'inline-block',
-                'marginBottom': '2.5%', 'marginRight': '5%'
-            }
-        ),
-    ]),
+    html.H5('Seventy Upgrades Input'),
+    dcc.Markdown(
+        'This simulator uses Seventy Upgrades as its gear selection UI. In '
+        'order to use it, create a Seventy Upgrades profile for your character'
+        ' and download the gear set using the "Export" button at the top right'
+        ' of the character sheet. Make sure that "Cat Form" is selected in the'
+        ' export window, and that "Talents" are checked (and set up in your '
+        'character sheet).',
+        style={'width': 300},
+    ),
+    dcc.Markdown(
+        'Consumables and party/raid buffs can be specified either in the '
+        'Seventy Upgrades "Buffs" tab, or in the "Consumables" and "Raid '
+        'Buffs " sections in the sim. If the "Buffs" option is checked in the '
+        'Seventy Upgrades export window, then the corresponding sections in '
+        'the sim input will be ignored.',
+        style={'width': 300},
+    ),
+    dcc.Upload(
+        id='upload-data',
+        children=html.Div([
+            'Drag and Drop or ',
+            html.A('Select File')
+        ]),
+        style={
+            'width': '100%',
+            'height': '60px',
+            'lineHeight': '60px',
+            'borderWidth': '1px',
+            'borderStyle': 'dashed',
+            'borderRadius': '5px',
+            'textAlign': 'center',
+            'margin': '0px'
+        },
+        # Don't allow multiple files to be uploaded
+        multiple=False
+    ),
     html.Br(),
-    html.Div([
-        html.Div(
-            'Attack Power:',
-            style={
-                'width': '40%', 'display': 'inline-block',
-                'fontWeight': 'bold'
-            }
-        ),
-        dbc.Input(
-            type='number', value=3422, id='unbuffed_attack_power',
-            style={
-                'width': '30%', 'display': 'inline-block',
-                'marginBottom': '2.5%'
-            }
-        )
-    ]),
-    html.Div([
-        html.Div(
-            'Added Weapon Damage',
-            style={
-                'width': '40%', 'display': 'inline-block',
-                'fontWeight': 'bold'
-            }
-        ),
-        dbc.Input(
-            type='number', value=5, id='weapon_damage',
-            style={
-                'width': '30%', 'display': 'inline-block',
-                'marginBottom': '2.5%'
-            }
-        )
-    ]),
-    html.Div([
-        html.Div(
-            'Crit Chance:',
-            style={
-                'width': '40%', 'display': 'inline-block',
-                'marginBottom': '0%', 'fontWeight': 'bold'
-            }
-        ),
-        dbc.Input(
-            type='number', value=41.18, id='unbuffed_crit',
-            style={
-                'width': '30%', 'display': 'inline-block',
-                'marginBottom': '2.5%', 'marginRight': '5%'
-            },
-            min=0.0, max=100.0, step=0.01
-        ),
-        html.Div(
-            '%',
-            style={
-                'width': '25%', 'display': 'inline-block',
-                'textAlign': 'left'
-            }
-        )
-    ]),
-    html.Div([
-        html.Div(
-            'Hit Chance:',
-            style={
-                'width': '40%', 'display': 'inline-block',
-                'marginBottom': '0%', 'fontWeight': 'bold'
-            }
-        ),
-        dbc.Input(
-            type='number', value=5.45, id='unbuffed_hit',
-            style={
-                'width': '30%', 'display': 'inline-block',
-                'marginBottom': '2.5%', 'marginRight': '5%'
-            },
-            min=0.0, max=9.0, step=0.01
-        ),
-        html.Div(
-            '%',
-            style={
-                'width': '25%', 'display': 'inline-block',
-                'textAlign': 'left'
-            }
-        )
-    ]),
-    html.Div([
-        html.Div(
-            'Haste Rating:',
-            style={
-                'width': '40%', 'display': 'inline-block',
-                'fontWeight': 'bold'
-            }
-        ),
-        dbc.Input(
-            type='number', value=0, id='haste_rating',
-            style={
-                'width': '30%', 'display': 'inline-block',
-                'marginBottom': '2.5%'
-            }
-        )
-    ]),
-    html.Div([
-        html.Div(
-            'Armor Penetration:',
-            style={
-                'width': '40%', 'display': 'inline-block',
-                'fontWeight': 'bold'
-            }
-        ),
-        dbc.Input(
-            type='number', value=0, id='armor_pen',
-            style={
-                'width': '30%', 'display': 'inline-block',
-                'marginBottom': '2.5%'
-            }
-        )
-    ]),
-    html.Div([
-        html.Div(
-            'Expertise Rating:',
-            style={
-                'width': '40%', 'display': 'inline-block',
-                'fontWeight': 'bold'
-            }
-        ),
-        dbc.Input(
-            type='number', value=25, id='expertise_rating',
-            style={
-                'width': '30%', 'display': 'inline-block',
-                'marginBottom': '2.5%'
-            }
-        )
-    ]),
-    html.Div([
-        html.Div(
-            'Equipped weapon speed:',
-            style={
-                'width': '40%', 'display': 'inline-block',
-                'marginBottom': '0%', 'fontWeight': 'bold'
-            }
-        ),
-        dbc.Input(
-            value=2.0, type='number', id='unbuffed_weapon_speed',
-            style={
-                'width': '30%', 'display': 'inline-block',
-                'marginBottom': '2.5%', 'marginRight': '5%'
-            },
-            min=0.1, max=5.0, step=0.1
-        ),
-        html.Div(
-            'seconds',
-            style={
-                'width': '25%', 'display': 'inline-block',
-                'textAlign': 'left'
-            }
-        )
-    ]),
-    html.Div([
-        html.Div(
-            'Mana:',
-            style={
-                'width': '40%', 'display': 'inline-block',
-                'marginBottom': '0%', 'fontWeight': 'bold'
-            }
-        ),
-        dbc.Input(
-            value=5720, type='number', id='unbuffed_mana',
-            style={
-                'width': '30%', 'display': 'inline-block',
-                'marginBottom': '2.5%', 'marginRight': '5%'
-            }
-        ),
-    ]),
-    html.Div([
-        html.Div(
-            'MP5:',
-            style={
-                'width': '40%', 'display': 'inline-block',
-                'marginBottom': '0%', 'fontWeight': 'bold'
-            }
-        ),
-        dbc.Input(
-            value=0, type='number', id='unbuffed_mp5',
-            style={
-                'width': '30%', 'display': 'inline-block',
-                'marginBottom': '2.5%', 'marginRight': '5%'
-            }
-        ),
-    ]),
+    html.Div(
+        'No file uploaded, using default input stats instead.',
+        id='upload_status', style={'color': '#E59F3A'}
+    ),
+    html.Br(),
+    html.H5('Idols and Set Bonuses'),
+    dbc.Checklist(
+        options=[{'label': 'Idol of the Raven Goddess', 'value': 'raven'}],
+        value=['raven'], id='raven_idol'
+    ),
+    dbc.Checklist(
+        options=[
+            {'label': 'Everbloom Idol', 'value': 'everbloom'},
+            {'label': 'Idol of Terror', 'value': 'idol_of_terror'},
+            {'label': 'Idol of the White Stag', 'value': 'stag_idol'},
+            {'label': '2-piece Tier 4 bonus', 'value': 't4_bonus'},
+            {'label': '4-piece Tier 5 bonus', 'value': 't5_bonus'},
+            {'label': '2-piece Tier 6 bonus', 'value': 't6_2p'},
+            {'label': '4-piece Tier 6 bonus', 'value': 't6_4p'},
+            {'label': 'Wolfshead Helm', 'value': 'wolfshead'},
+            {'label': 'Relentless Earthstorm Diamond', 'value': 'meta'},
+            {'label': 'Band of the Eternal Champion', 'value': 'exalted_ring'},
+        ],
+        value=['t6_2p', 't6_4p', 'wolfshead', 'exalted_ring'],
+        id='bonuses'
+    ),
     ], width='auto', style={'marginBottom': '2.5%', 'marginLeft': '2.5%'})
 
 buffs_1 = dbc.Col(
-    [html.H5('Consumables'),
+    [dbc.Collapse([html.H5('Consumables'),
      dbc.Checklist(
          options=[{'label': 'Elixir of Major Agility', 'value': 'agi_elixir'},
                   {'label': 'Warp Burger / Grilled Mudfish', 'value': 'food'},
                   {'label': 'Scroll of Agility V', 'value': 'scroll_agi'},
                   {'label': 'Scroll of Strength V', 'value': 'scroll_str'},
-                  {'label': 'Consecrated Sharpening Stone', 'value': 'consec'},
-                  {'label': 'Adamantite Weightstone', 'value': 'weightstone'},
-                  {'label': 'Dark / Demonic Rune', 'value': 'rune'}],
+                  {'label': 'Adamantite Weightstone', 'value': 'weightstone'}],
          value=[
              'agi_elixir', 'food', 'scroll_agi', 'scroll_str', 'weightstone',
-             'rune'
          ],
          id='consumables'
-     ),
-     dbc.InputGroup(
-         [
-             dbc.InputGroupAddon('Potion CD:', addon_type='prepend'),
-             dbc.Select(
-                 options=[
-                     {'label': 'Super Mana Potion', 'value': 'super'},
-                     {'label': 'Fel Mana Potion', 'value': 'fel'},
-                     {'label': 'Haste Potion', 'value': 'haste'},
-                     {'label': 'None', 'value': 'none'},
-                 ],
-                 value='super', id='potion',
-             ),
-         ],
-         style={'width': '50%', 'marginTop': '1.5%'}
      ),
      html.Br(),
      html.H5('Raid Buffs'),
      dbc.Checklist(
          options=[{'label': 'Blessing of Kings', 'value': 'kings'},
                   {'label': 'Blessing of Might', 'value': 'might'},
+                  {'label': 'Blessing of Wisdom', 'value': 'wisdom'},
                   {'label': 'Mark of the Wild', 'value': 'motw'},
                   {'label': 'Trueshot Aura', 'value': 'trueshot_aura'},
-                  {'label': 'Improved Sanctity Aura', 'value': 'sanc_aura'},
+                  {'label': 'Heroic Presence', 'value': 'heroic_presence'},
                   {'label': 'Strength of Earth Totem', 'value': 'str_totem'},
                   {'label': 'Grace of Air Totem', 'value': 'agi_totem'},
+                  {'label': 'Unleashed Rage', 'value': 'unleashed_rage'},
                   {'label': 'Arcane Intellect', 'value': 'ai'},
                   {'label': 'Prayer of Spirit', 'value': 'spirit'},
-                  {'label': 'Blessing of Wisdom', 'value': 'wisdom'},
                   {'label': 'Battle Shout', 'value': 'bshout'}],
          value=[
-             'kings', 'might', 'motw', 'str_totem', 'agi_totem', 'ai',
+             'kings', 'might', 'motw', 'str_totem', 'agi_totem',
+             'unleashed_rage', 'ai', 'bshout'
          ],
          id='raid_buffs'
      ),
      dbc.Checklist(
          options=[{'label': 'Commanding Presence', 'value': 'talent'},
                   {'label': "Solarian's Sapphire", 'value': 'trinket'}],
-         value=[], id='bshout_options',
-         style={'marginLeft': '5%'},
+         value=['talent'], id='bshout_options',
+         style={'marginLeft': '10%'},
      ),
-     html.Br(),
+     html.Br()], id='buff_section', is_open=True),
      html.H5('Other Buffs'),
-     dbc.Row(
-         [dbc.Col(dbc.Checklist(
-             options=[{'label': 'Manual Crowd Pummeler - Maximum uses:',
-                       'value': 'mcp'},
-                      {'label': 'Bloodlust', 'value': 'lust'},
-                      {'label': 'Drums of Battle', 'value': 'drums'},
-                      {'label': 'Omen of Clarity', 'value': 'omen'},
-                      {'label': 'Bogling Root', 'value': 'bogling_root'},
-                      {'label': 'Unleashed Rage', 'value': 'unleashed_rage'},
-                      {'label': 'Heroic Presence', 'value': 'heroic_presence'},
-                      {
-                          'label': 'Braided Eternium Chain',
-                          'value': 'be_chain'
-                      }],
-             value=['lust', 'omen', 'heroic_presence', 'be_chain'],
-             id='other_buffs',
-          ), width='auto'),
-          dbc.Col(dbc.Input(
-              value=2, type='number', id='num_mcp',
-              style={'width': '35%', 'marginTop': '-5%'}
-          ))],
+     dbc.Checklist(
+         options=[
+             {'label': 'Omen of Clarity', 'value': 'omen'},
+             {'label': 'Bogling Root', 'value': 'bogling_root'},
+             {'label': 'Consecrated Sharpening Stone', 'value': 'consec'},
+             {'label': 'Improved Sanctity Aura', 'value': 'sanc_aura'},
+             {'label': 'Braided Eternium Chain', 'value': 'be_chain'},
+         ],
+         value=['omen'], id='other_buffs'
      ),
      dbc.InputGroup(
          [
@@ -360,45 +177,17 @@ buffs_1 = dbc.Col(
                  'Ferocious Inspiration stacks:', addon_type='prepend'
              ),
              dbc.Input(
-                 value=2, type='number', id='ferocious_inspiration', min=0,
+                 value=0, type='number', id='ferocious_inspiration', min=0,
                  max=4
              )
          ],
-         style={'width': '45%', 'marginTop': '2%'}, size='sm'
+         style={'width': '100%', 'marginTop': '2%'}, size='sm'
      )],
     width='auto', style={'marginBottom': '2.5%', 'marginLeft': '2.5%'}
 )
 
 encounter_details = dbc.Col(
-    [html.H5('Idols and Set Bonuses'),
-     dbc.Checklist(
-         options=[{'label': 'Idol of the Raven Goddess', 'value': 'raven'}],
-         value=['raven'], id='raven_idol'
-     ),
-     dbc.Checklist(
-         options=[
-                     {'label': 'Everbloom Idol', 'value': 'everbloom'},
-                     {'label': 'Idol of Terror', 'value': 'idol_of_terror'},
-                     {'label': 'Idol of the White Stag', 'value': 'stag_idol'},
-                     {'label': '2-piece Tier 4 bonus', 'value': 't4_bonus'},
-                     {'label': '4-piece Tier 5 bonus', 'value': 't5_bonus'},
-                     {'label': '2-piece Tier 6 bonus', 'value': 't6_2p'},
-                     {'label': '4-piece Tier 6 bonus', 'value': 't6_4p'},
-                     {'label': 'Wolfshead Helm', 'value': 'wolfshead'},
-                     {
-                         'label': 'Relentless Earthstorm Diamond',
-                         'value': 'meta'
-                     },
-                     {
-                         'label': 'Band of the Eternal Champion',
-                         'value': 'exalted_ring'
-                     },
-                 ],
-         value=['t6_2p', 't6_4p', 'wolfshead', 'exalted_ring'],
-         id='bonuses'
-     ),
-     html.Br(),
-     html.H4('Encounter Details'),
+    [html.H4('Encounter Details'),
      dbc.InputGroup(
          [
              dbc.InputGroupAddon('Fight Length:', addon_type='prepend'),
@@ -407,14 +196,14 @@ encounter_details = dbc.Col(
              ),
              dbc.InputGroupAddon('seconds', addon_type='append')
          ],
-         style={'width': '75%'}
+         style={'width': '50%'}
      ),
      dbc.InputGroup(
          [
              dbc.InputGroupAddon('Boss Armor:', addon_type='prepend'),
              dbc.Input(value=7700, type='number', id='boss_armor')
          ],
-         style={'width': '75%'}
+         style={'width': '50%'}
      ),
      html.Br(),
      html.H5('Damage Debuffs'),
@@ -444,7 +233,7 @@ encounter_details = dbc.Col(
              {'label': 'Judgment of Wisdom', 'value': 'jow'},
              {'label': 'Expose weakness', 'value': 'expose'},
          ],
-         value=['imp_ff', 'hunters_mark', 'jow', 'expose'],
+         value=['imp_ff', 'hunters_mark', 'jotc', 'jow', 'expose'],
          id='stat_debuffs',
      ),
      dbc.InputGroup(
@@ -455,9 +244,52 @@ encounter_details = dbc.Col(
              dbc.Input(value=1000, type='number', id='surv_agi',),
          ],
          size='sm',
-         style={'width': '60%', 'marginTop': '2%', 'marginLeft': '10%'},
+         style={'width': '40%', 'marginTop': '1%', 'marginLeft': '5%'},
+     ),
+     html.Br(),
+     html.H5('Cooldowns'),
+     dbc.Row([
+         dbc.Col(
+             dbc.Checklist(
+                 options=[
+                     {
+                         'label': 'Manual Crowd Pummeler - Maximum uses:',
+                         'value': 'mcp',
+                     },
+                     {'label': 'Bloodlust', 'value': 'lust'},
+                     {'label': 'Drums of Battle', 'value': 'drums'},
+                     {'label': 'Dark / Demonic Rune', 'value': 'rune'},
+                 ],
+                 value=['lust', 'drums', 'rune'], id='cooldowns',
+             ),
+             width='auto',
+         ),
+         dbc.Col(
+             dbc.Input(
+                 value=2, type='number', id='num_mcp',
+                 style={'width': '35%', 'marginTop': '-5%'},
+             )
+         )
+     ]),
+     dbc.InputGroup(
+         [
+             dbc.InputGroupAddon('Potion CD:', addon_type='prepend'),
+             dbc.Select(
+                 options=[
+                     {'label': 'Super Mana Potion', 'value': 'super'},
+                     {'label': 'Fel Mana Potion', 'value': 'fel'},
+                     {'label': 'Haste Potion', 'value': 'haste'},
+                     {'label': 'None', 'value': 'none'},
+                 ],
+                 value='super', id='potion',
+             ),
+         ],
+         style={'width': '50%', 'marginTop': '1.5%'}
      )],
-    width='auto', style={'marginLeft': '2.5%', 'marginBottom': '2.5%'}
+    width='auto',
+    style={
+        'marginLeft': '2.5%', 'marginBottom': '2.5%', 'marginRight': '-2.5%'
+    }
 )
 
 # Sim replicates input
@@ -466,13 +298,13 @@ iteration_input = dbc.Col([
     html.Div(
         'Number of replicates:',
         style={
-            'width': '40%', 'display': 'inline-block', 'fontWeight': 'bold'
+            'width': '35%', 'display': 'inline-block', 'fontWeight': 'bold'
         }
     ),
     dbc.Input(
         type='number', value=20000, id='num_replicates',
         style={
-            'width': '50%', 'display': 'inline-block', 'marginBottom': '2.5%'
+            'width': '20%', 'display': 'inline-block', 'marginBottom': '2.5%'
         }
     ),
     html.Br(),
@@ -496,7 +328,7 @@ iteration_input = dbc.Col([
             ],
             value='0', id='feral_aggression',
             style={
-                'width': '35%', 'display': 'inline-block',
+                'width': '20%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
             }
         )]),
@@ -516,7 +348,7 @@ iteration_input = dbc.Col([
             ],
             value=2, id='savage_fury',
             style={
-                'width': '35%', 'display': 'inline-block',
+                'width': '20%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
             }
         )]),
@@ -539,7 +371,7 @@ iteration_input = dbc.Col([
             ],
             value=5, id='naturalist',
             style={
-                'width': '35%', 'display': 'inline-block',
+                'width': '20%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
             }
         )]),
@@ -560,7 +392,7 @@ iteration_input = dbc.Col([
             ],
             value=3, id='natural_shapeshifter',
             style={
-                'width': '35%', 'display': 'inline-block',
+                'width': '20%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
             }
         )]),
@@ -581,7 +413,7 @@ iteration_input = dbc.Col([
             ],
             value=3, id='intensity',
             style={
-                'width': '35%', 'display': 'inline-block',
+                'width': '20%', 'display': 'inline-block',
                 'marginBottom': '2.5%', 'marginRight': '5%'
             }
         )]),
@@ -1036,20 +868,36 @@ weights_section = dbc.Col([
                     color='info'
                 ), width='auto'),
                 dbc.Col(
-                    dbc.FormGroup(
-                        [
-                            dbc.Checkbox(
-                                id='calc_mana_weights',
-                                className='form-check-input'
-                            ),
-                            dbc.Label(
-                                'Include mana weights',
-                                html_for='calc_mana_weights',
-                                className='form-check-label'
-                            )
-                        ],
-                        check=True
-                    ),
+                    [
+                        dbc.FormGroup(
+                            [
+                                dbc.Checkbox(
+                                    id='calc_mana_weights',
+                                    className='form-check-input', checked=False
+                                ),
+                                dbc.Label(
+                                    'Include mana weights',
+                                    html_for='calc_mana_weights',
+                                    className='form-check-label'
+                                )
+                            ],
+                            check=True
+                        ),
+                        dbc.FormGroup(
+                            [
+                                dbc.Checkbox(
+                                    id='epic_gems',
+                                    className='form-check-input', checked=True
+                                ),
+                                dbc.Label(
+                                    'Assume Epic gems',
+                                    html_for='epic_gems',
+                                    className='form-check-label'
+                                )
+                            ],
+                            check=True
+                        ),
+                    ],
                     width='auto'
                 )
             ]
@@ -1260,23 +1108,77 @@ def process_trinkets(trinket_1, trinket_2, player, ap_mod, stat_mod, cd_delay):
     return all_trinkets
 
 
-def create_buffed_player(
-        unbuffed_strength, unbuffed_agi, unbuffed_int, unbuffed_spirit,
-        unbuffed_ap, unbuffed_crit, unbuffed_hit, haste_rating,
-        expertise_rating, armor_pen, weapon_damage, weapon_speed,
-        unbuffed_mana, unbuffed_mp5, consumables, raid_buffs, bshout_options,
-        num_mcp, other_buffs, stat_debuffs, surv_agi, feral_aggression,
-        savage_fury, naturalist, natural_shapeshifter, ferocious_inspiration,
-        intensity, potion, bonuses, raven_idol
+def create_player(
+        buffed_attack_power, buffed_hit, buffed_crit, buffed_weapon_damage,
+        haste_rating, expertise_rating, armor_pen, buffed_mana_pool,
+        buffed_int, buffed_spirit, buffed_mp5, weapon_speed, unleashed_rage,
+        kings, raven_idol, other_buffs, stat_debuffs, cooldowns, num_mcp,
+        surv_agi, ferocious_inspiration, bonuses, naturalist, feral_aggression,
+        savage_fury, natural_shapeshifter, intensity, potion
 ):
-    """Compute fully raid buffed stats based on specified raid buffs, and
-    instantiate a Player object with those stats."""
+    """Takes in raid buffed player stats from Seventy Upgrades, modifies them
+    based on boss debuffs and miscellaneous buffs not captured by Seventy
+    Upgrades, and instantiates a Player object with those stats."""
 
     # Swing timer calculation is independent of other buffs. First we add up
     # the haste rating from all the specified haste buffs
-    use_mcp = ('mcp' in other_buffs) and (num_mcp > 0)
+    use_mcp = ('mcp' in cooldowns) and (num_mcp > 0)
     buffed_haste_rating = haste_rating + 500 * use_mcp
     buffed_swing_timer = ccs.calc_swing_timer(buffed_haste_rating)
+
+    # Augment secondary stats as needed
+    ap_mod = 1.1 * (1 + 0.1 * unleashed_rage)
+    encounter_AP = buffed_attack_power + ap_mod * (
+        100 * ('consec' in other_buffs)
+        + 110 * ('hunters_mark' in stat_debuffs)
+        + 0.25 * surv_agi * ('expose' in stat_debuffs)
+    )
+    encounter_crit = (
+        buffed_crit + 3 * ('jotc' in stat_debuffs)
+        + (28 * ('be_chain' in other_buffs) + 20 * bool(raven_idol)) / 22.1
+    )
+    encounter_hit = buffed_hit + 3 * ('imp_ff' in stat_debuffs)
+
+    # Calculate bonus damage parameters
+    encounter_weapon_damage = (
+        buffed_weapon_damage + ('bogling_root' in other_buffs)
+    )
+    damage_multiplier = (
+        (1 + 0.02 * int(naturalist)) * 1.03**ferocious_inspiration
+        * (1 + 0.02 * ('sanc_aura' in other_buffs))
+    )
+    shred_bonus = 88 * ('everbloom' in bonuses) + 75 * ('t5_bonus' in bonuses)
+
+    # Create and return a corresponding Player object
+    player = ccs.Player(
+        attack_power=encounter_AP, hit_chance=encounter_hit / 100,
+        expertise_rating=expertise_rating, crit_chance=encounter_crit / 100,
+        swing_timer=buffed_swing_timer, mana=buffed_mana_pool,
+        intellect=buffed_int, spirit=buffed_spirit, mp5=buffed_mp5,
+        omen='omen' in other_buffs, feral_aggression=int(feral_aggression),
+        savage_fury=int(savage_fury),
+        natural_shapeshifter=int(natural_shapeshifter),
+        intensity=int(intensity), weapon_speed=weapon_speed,
+        bonus_damage=encounter_weapon_damage, multiplier=damage_multiplier,
+        jow='jow' in stat_debuffs, armor_pen=armor_pen,
+        t4_bonus='t4_bonus' in bonuses, t6_2p='t6_2p' in bonuses,
+        t6_4p='t6_4p' in bonuses, wolfshead='wolfshead' in bonuses,
+        meta='meta' in bonuses, rune='rune' in cooldowns,
+        pot=potion in ['super', 'fel'], cheap_pot=(potion == 'super'),
+        shred_bonus=shred_bonus
+    )
+    return player, ap_mod, (1 + 0.1 * kings) * 1.03
+
+
+def apply_buffs(
+        unbuffed_ap, unbuffed_strength, unbuffed_agi, unbuffed_hit,
+        unbuffed_crit, unbuffed_mana, unbuffed_int, unbuffed_spirit,
+        unbuffed_mp5, weapon_damage, raid_buffs, consumables, bshout_options
+):
+    """Takes in unbuffed player stats, and turns them into buffed stats based
+    on specified consumables and raid buffs. This function should only be
+    called if the "Buffs" option is not checked in the exported file from
+    Seventy Upgrades, or else the buffs will be double counted!"""
 
     # Determine "raw" AP, crit, and mana not from Str/Agi/Int
     raw_ap_unbuffed = unbuffed_ap / 1.1 - 2 * unbuffed_strength - unbuffed_agi
@@ -1285,14 +1187,14 @@ def create_buffed_player(
 
     # Augment all base stats based on specified buffs
     stat_multiplier = 1 + 0.1 * ('kings' in raid_buffs)
-    added_stats = 18.9 * ('motw' in raid_buffs)
+    added_stats = 18 * ('motw' in raid_buffs)
 
     buffed_strength = stat_multiplier * (unbuffed_strength + 1.03 * (
-        added_stats + 88.55 * ('str_totem' in raid_buffs)
+        added_stats + 98 * ('str_totem' in raid_buffs)
         + 20 * ('scroll_str' in consumables)
     ))
     buffed_agi = stat_multiplier * (unbuffed_agi + 1.03 * (
-        added_stats + 88.55 * ('agi_totem' in raid_buffs)
+        added_stats + 88 * ('agi_totem' in raid_buffs)
         + 35 * ('agi_elixir' in consumables) + 20 * ('food' in consumables)
         + 20 * ('scroll_agi' in consumables)
     ))
@@ -1305,66 +1207,44 @@ def create_buffed_player(
     ))
 
     # Now augment secondary stats
-    ap_mod = 1.1 * (1 + 0.1 * ('unleashed_rage' in other_buffs))
+    ap_mod = 1.1 * (1 + 0.1 * ('unleashed_rage' in raid_buffs))
     bshout_ap = (
-        ('bshout' in raid_buffs) * (306 + 70 * ('trinket' in bshout_options))
+        ('bshout' in raid_buffs) * (305 + 70 * ('trinket' in bshout_options))
         * (1. + 0.25 * ('talent' in bshout_options))
     )
     buffed_attack_power = ap_mod * (
         raw_ap_unbuffed + 2 * buffed_strength + buffed_agi
-        + 222 * ('might' in raid_buffs) + bshout_ap
-        + 100 * ('trueshot_aura' in raid_buffs)
-        + 100 * ('consec' in consumables)
-        + 110 * ('hunters_mark' in stat_debuffs)
-        + 0.25 * surv_agi * ('expose' in stat_debuffs)
+        + 264 * ('might' in raid_buffs) + bshout_ap
+        + 125 * ('trueshot_aura' in raid_buffs)
     )
     added_crit_rating = (
         20 * ('agi_elixir' in consumables)
         + 14 * ('weightstone' in consumables)
-        + 28 * ('be_chain' in other_buffs)
-        + 20 * bool(raven_idol)
     )
     buffed_crit = (
-        raw_crit_unbuffed + buffed_agi / 25 + 3 * ('jotc' in stat_debuffs)
-        + added_crit_rating / 22.1
+        raw_crit_unbuffed + buffed_agi / 25 + added_crit_rating / 22.1
     )
     buffed_hit = (
-        unbuffed_hit + 3 * ('imp_ff' in stat_debuffs)
-        + 1 * ('heroic_presence' in other_buffs)
+        unbuffed_hit + 1 * ('heroic_presence' in raid_buffs)
     )
     buffed_mana_pool = raw_mana_unbuffed + buffed_int * 15
-    buffed_mp5 = unbuffed_mp5 + 39.6 * ('wisdom' in raid_buffs)
+    buffed_mp5 = unbuffed_mp5 + 49 * ('wisdom' in raid_buffs)
+    buffed_weapon_damage = (
+        12 * ('weightstone' in consumables) + weapon_damage
+    )
 
-    # Calculate bonus damage parameters
-    bonus_weapon_damage = (
-        12 * ('weightstone' in consumables) + ('bogling_root' in other_buffs)
-        + weapon_damage
-    )
-    damage_multiplier = (
-        (1 + 0.02 * int(naturalist)) * 1.03**ferocious_inspiration
-        * (1 + 0.02 * ('sanc_aura' in raid_buffs))
-    )
-    shred_bonus = 88 * ('everbloom' in bonuses) + 75 * ('t5_bonus' in bonuses)
-
-    # Create and return a corresponding Player object
-    player = ccs.Player(
-        attack_power=buffed_attack_power, hit_chance=buffed_hit / 100,
-        expertise_rating=expertise_rating, crit_chance=buffed_crit / 100,
-        swing_timer=buffed_swing_timer, mana=buffed_mana_pool,
-        intellect=buffed_int, spirit=buffed_spirit, mp5=buffed_mp5,
-        omen='omen' in other_buffs, feral_aggression=int(feral_aggression),
-        savage_fury=int(savage_fury),
-        natural_shapeshifter=int(natural_shapeshifter),
-        intensity=int(intensity), weapon_speed=weapon_speed,
-        bonus_damage=bonus_weapon_damage, multiplier=damage_multiplier,
-        jow='jow' in stat_debuffs, armor_pen=armor_pen,
-        t4_bonus='t4_bonus' in bonuses, t6_2p='t6_2p' in bonuses,
-        t6_4p='t6_4p' in bonuses, wolfshead='wolfshead' in bonuses,
-        meta='meta' in bonuses, rune='rune' in consumables,
-        pot=potion in ['super', 'fel'], cheap_pot=(potion == 'super'),
-        shred_bonus=shred_bonus
-    )
-    return player, ap_mod, stat_multiplier * 1.03
+    return {
+        'strength': buffed_strength,
+        'agility': buffed_agi,
+        'intellect': buffed_int,
+        'spirit': buffed_spirit,
+        'attackPower': buffed_attack_power,
+        'crit': buffed_crit,
+        'hit': buffed_hit,
+        'weaponDamage': buffed_weapon_damage,
+        'mana': buffed_mana_pool,
+        'mp5': buffed_mp5
+    }
 
 
 def run_sim(sim, num_replicates):
@@ -1447,7 +1327,7 @@ def append_mana_weights(
 
 def calc_weights(
         sim, num_replicates, avg_dps, calc_mana_weights, time_to_oom,
-        raid_buffs, unleashed_rage
+        kings, unleashed_rage, epic_gems
 ):
     # Check that sufficient iterations are used for convergence.
     if num_replicates < 20000:
@@ -1480,8 +1360,10 @@ def calc_weights(
         ]))
 
     # Generate 70upgrades import link for raw stats
-    stat_multiplier = (1 + 0.1 * ('kings' in raid_buffs)) * 1.03
-    url = ccs.gen_import_link(stat_weights, multiplier=stat_multiplier)
+    stat_multiplier = (1 + 0.1 * kings) * 1.03
+    url = ccs.gen_import_link(
+        stat_weights, multiplier=stat_multiplier, epic_gems=epic_gems
+    )
     link = html.A('Seventy Upgrades Import Link', href=url, target='_blank')
 
     # Only calculate mana stats if requested
@@ -1538,6 +1420,9 @@ def plot_new_trajectory(sim, show_whites):
 
 # Master callback function
 @app.callback(
+    Output('upload_status', 'children'),
+    Output('upload_status', 'style'),
+    Output('buff_section', 'is_open'),
     Output('buffed_swing_timer', 'children'),
     Output('buffed_attack_power', 'children'),
     Output('buffed_crit', 'children'),
@@ -1557,19 +1442,7 @@ def plot_new_trajectory(sim, show_whites):
     Output('import_link', 'children'),
     Output('energy_flow', 'figure'),
     Output('combat_log', 'children'),
-    Input('unbuffed_strength', 'value'),
-    Input('unbuffed_agi', 'value'),
-    Input('unbuffed_int', 'value'),
-    Input('unbuffed_spirit', 'value'),
-    Input('unbuffed_attack_power', 'value'),
-    Input('unbuffed_crit', 'value'),
-    Input('unbuffed_hit', 'value'),
-    Input('haste_rating', 'value'),
-    Input('armor_pen', 'value'),
-    Input('expertise_rating', 'value'),
-    Input('unbuffed_weapon_speed', 'value'),
-    Input('unbuffed_mana', 'value'),
-    Input('unbuffed_mp5', 'value'),
+    Input('upload-data', 'contents'),
     Input('consumables', 'value'),
     Input('raid_buffs', 'value'),
     Input('bshout_options', 'value'),
@@ -1583,7 +1456,6 @@ def plot_new_trajectory(sim, show_whites):
     Input('run_button', 'n_clicks'),
     Input('weight_button', 'n_clicks'),
     Input('graph_button', 'n_clicks'),
-    State('weapon_damage', 'value'),
     State('potion', 'value'),
     State('ferocious_inspiration', 'value'),
     State('bonuses', 'value'),
@@ -1595,6 +1467,7 @@ def plot_new_trajectory(sim, show_whites):
     State('fight_length', 'value'),
     State('boss_armor', 'value'),
     State('boss_debuffs', 'value'),
+    State('cooldowns', 'value'),
     State('finisher', 'value'),
     State('rip_cp', 'value'),
     State('bite_cp', 'value'),
@@ -1613,33 +1486,100 @@ def plot_new_trajectory(sim, show_whites):
     State('bear_mangle', 'value'),
     State('num_replicates', 'value'),
     State('calc_mana_weights', 'checked'),
+    State('epic_gems', 'checked'),
     State('show_whites', 'checked'))
 def compute(
-        unbuffed_strength, unbuffed_agi, unbuffed_int, unbuffed_spirit,
-        unbuffed_ap, unbuffed_crit, unbuffed_hit, haste_rating, armor_pen,
-        expertise_rating, weapon_speed, unbuffed_mana, unbuffed_mp5,
-        consumables, raid_buffs, bshout_options, num_mcp, other_buffs,
-        raven_idol, stat_debuffs, surv_agi, trinket_1, trinket_2, run_clicks,
-        weight_clicks, graph_clicks, weapon_damage, potion,
-        ferocious_inspiration, bonuses, feral_aggression, savage_fury,
-        naturalist, natural_shapeshifter, intensity, fight_length, boss_armor,
-        boss_debuffs, finisher, rip_cp, bite_cp, max_wait_time, cd_delay,
-        prepop_TF, prepop_numticks, use_mangle_trick, use_rake_trick,
+        json_file, consumables, raid_buffs, bshout_options, num_mcp,
+        other_buffs, raven_idol, stat_debuffs, surv_agi, trinket_1, trinket_2,
+        run_clicks, weight_clicks, graph_clicks, potion, ferocious_inspiration,
+        bonuses, feral_aggression, savage_fury, naturalist,
+        natural_shapeshifter, intensity, fight_length, boss_armor,
+        boss_debuffs, cooldowns, finisher, rip_cp, bite_cp, max_wait_time,
+        cd_delay, prepop_TF, prepop_numticks, use_mangle_trick, use_rake_trick,
         use_bite_trick, bite_trick_cp, bite_trick_max, use_innervate,
         use_bite, bite_time, bear_mangle, num_replicates, calc_mana_weights,
-        show_whites
+        epic_gems, show_whites
 ):
     ctx = dash.callback_context
 
-    # Create Player object based on specified stat inputs and talents
-    player, ap_mod, stat_mod = create_buffed_player(
-        unbuffed_strength, unbuffed_agi, unbuffed_int, unbuffed_spirit,
-        unbuffed_ap, unbuffed_crit, unbuffed_hit, haste_rating,
-        expertise_rating, armor_pen, weapon_damage, weapon_speed,
-        unbuffed_mana, unbuffed_mp5, consumables, raid_buffs, bshout_options,
-        num_mcp, other_buffs, stat_debuffs, surv_agi, feral_aggression,
-        savage_fury, naturalist, natural_shapeshifter, ferocious_inspiration,
-        intensity, potion, bonuses, raven_idol
+    # Parse input stats JSON
+    buffs_present = False
+
+    if json_file is None:
+        input_stats = copy.copy(default_input_stats)
+        upload_output = (
+            'No file uploaded, using default input stats instead.',
+            {'color': '#E59F3A', 'width': 300}, True
+        )
+    else:
+        try:
+            content_type, content_string = json_file.split(',')
+            decoded = base64.b64decode(content_string)
+            input_json = json.load(io.StringIO(decoded.decode('utf-8')))
+            buffs_present = input_json['exportOptions']['buffs']
+
+            if buffs_present:
+                upload_output = (
+                    'Upload successful. Buffs detected in Seventy Upgrades '
+                    'export, so the "Consumables" and "Raid Buffs" sections in'
+                    ' the sim input will be ignored.',
+                    {'color': '#5AB88F', 'width': 300}, False
+                )
+            else:
+                upload_output = (
+                    'Upload successful. No buffs detected in Seventy Upgrades '
+                    'export, so use the  "Consumables" and "Raid Buffs" '
+                    'sections in the sim input for buff entry.',
+                    {'color': '#5AB88F', 'width': 300}, True
+                )
+
+            input_stats = input_json['stats']
+        except Exception:
+            input_stats = copy.copy(default_input_stats)
+            upload_output = (
+                'Error processing input file! Using default input stats '
+                'instead.',
+                {'color': '#D35845', 'width': 300}, True
+            )
+
+    # If buffs are not specified in the input file, then interpret the input
+    # stats as unbuffed and calculate the buffed stats ourselves.
+    if not buffs_present:
+        input_stats.update(apply_buffs(
+            input_stats['attackPower'], input_stats['strength'],
+            input_stats['agility'], input_stats['hit'], input_stats['crit'],
+            input_stats['mana'], input_stats['intellect'],
+            input_stats['spirit'], input_stats.get('mp5', 0),
+            input_stats.get('weaponDamage', 0), raid_buffs, consumables,
+            bshout_options
+        ))
+
+    # Determine whether Unleashed Rage and/or Blessing of Kings are present, as
+    # these impact stat weights and buff values.
+    if buffs_present:
+        unleashed_rage = False
+        kings = False
+
+        for buff in input_json['buffs']:
+            if buff['name'] == 'Blessing of Kings':
+                kings = True
+            if buff['name'] == 'Unleashed Rage':
+                unleashed_rage = True
+    else:
+        unleashed_rage = 'unleashed_rage' in raid_buffs
+        kings = 'kings' in raid_buffs
+
+    # Create Player object based on raid buffed stat inputs and talents
+    player, ap_mod, stat_mod = create_player(
+        input_stats['attackPower'], input_stats['hit'], input_stats['crit'],
+        input_stats.get('weaponDamage', 0), input_stats.get('hasteRating', 0),
+        input_stats.get('expertiseRating', 0), input_stats.get('armorPen', 0),
+        input_stats['mana'], input_stats['intellect'], input_stats['spirit'],
+        input_stats.get('mp5', 0), float(input_stats['mainHandSpeed']),
+        unleashed_rage, kings, raven_idol, other_buffs, stat_debuffs,
+        cooldowns, num_mcp, surv_agi, ferocious_inspiration, bonuses,
+        naturalist, feral_aggression, savage_fury, natural_shapeshifter,
+        intensity, potion
     )
 
     # Process trinkets
@@ -1658,13 +1598,13 @@ def compute(
     )
 
     # Create Simulation object based on specified parameters
-    max_mcp = num_mcp if 'mcp' in other_buffs else 0
+    max_mcp = num_mcp if 'mcp' in cooldowns else 0
     bite = (bool(use_bite) and (finisher == 'rip')) or (finisher == 'bite')
     rip_combos = 6 if finisher != 'rip' else int(rip_cp)
 
-    if 'lust' in other_buffs:
+    if 'lust' in cooldowns:
         trinket_list.append(trinkets.Bloodlust(delay=cd_delay))
-    if 'drums' in other_buffs:
+    if 'drums' in cooldowns:
         trinket_list.append(trinkets.ActivatedTrinket(
             'haste_rating', 80, 'Drums of Battle', 30, 120, delay=cd_delay
         ))
@@ -1735,7 +1675,7 @@ def compute(
             (ctx.triggered[0]['prop_id'] == 'weight_button.n_clicks')):
         weights_output = calc_weights(
             sim, num_replicates, avg_dps, calc_mana_weights, dps_output[2],
-            raid_buffs, 'unleashed_rage' in other_buffs
+            kings, unleashed_rage, epic_gems
         )
     else:
         weights_output = ('Stat Breakdown', '', [], '')
@@ -1747,11 +1687,14 @@ def compute(
     else:
         example_output = ({}, [])
 
-    return stats_output + dps_output + weights_output + example_output
+    return (
+        upload_output + stats_output + dps_output + weights_output
+        + example_output
+    )
 
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()
     app.run_server(
-        host='0.0.0.0', port=8080, debug=False
+        host='0.0.0.0', port=8080, debug=True
     )

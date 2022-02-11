@@ -120,7 +120,9 @@ def calc_haste_rating(swing_timer, multiplier=1.0):
     return 1577 * (1 / (swing_timer * multiplier) - 1)
 
 
-def gen_import_link(stat_weights, EP_name='Simmed Weights', multiplier=1.133):
+def gen_import_link(
+    stat_weights, EP_name='Simmed Weights', multiplier=1.133, epic_gems=False
+):
     """Generate 70upgrades stat weight import link from calculated weights.
 
     Arguments:
@@ -131,6 +133,9 @@ def gen_import_link(stat_weights, EP_name='Simmed Weights', multiplier=1.133):
             import interface. Defaults to "Simmed Weights".
         multiplier (float): Scaling factor for raw primary stats. Defaults to
             1.133 assuming Blessing of Kings and Predatory Instincts.
+        epic_gems (bool): Whether Epic quality gems (10 Agility) should be
+            assumed for socket weight calculations. Defaults to False (Rare
+            quality 8 Agi gems).
 
     Returns:
         import_link (str): Full URL for stat weight import into 70upgrades.
@@ -161,7 +166,8 @@ def gen_import_link(stat_weights, EP_name='Simmed Weights', multiplier=1.133):
     link += '&44=%.2f' % stat_weights['1 Armor Pen']
 
     # Gems
-    gem_weight = agi_weight * 8
+    gem_agi = 10 if epic_gems else 8
+    gem_weight = agi_weight * gem_agi
     link += '&74=%.2f&75=%.2f&76=%.2f' % (gem_weight, gem_weight, gem_weight)
 
     return link
