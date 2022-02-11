@@ -123,6 +123,7 @@ buffs_1 = dbc.Col(
     [dbc.Collapse([html.H5('Consumables'),
      dbc.Checklist(
          options=[{'label': 'Elixir of Major Agility', 'value': 'agi_elixir'},
+                  {'label': 'Elixir of Draenic Wisdom', 'value': 'draenic'},
                   {'label': 'Warp Burger / Grilled Mudfish', 'value': 'food'},
                   {'label': 'Scroll of Agility V', 'value': 'scroll_agi'},
                   {'label': 'Scroll of Strength V', 'value': 'scroll_str'},
@@ -167,9 +168,10 @@ buffs_1 = dbc.Col(
              {'label': 'Bogling Root', 'value': 'bogling_root'},
              {'label': 'Consecrated Sharpening Stone', 'value': 'consec'},
              {'label': 'Improved Sanctity Aura', 'value': 'sanc_aura'},
+             {'label': 'Mana Spring Totem', 'value': 'mana_spring_totem'},
              {'label': 'Braided Eternium Chain', 'value': 'be_chain'},
          ],
-         value=['omen'], id='other_buffs'
+         value=['omen', 'mana_spring_totem'], id='other_buffs'
      ),
      dbc.InputGroup(
          [
@@ -1138,6 +1140,7 @@ def create_player(
         + (28 * ('be_chain' in other_buffs) + 20 * bool(raven_idol)) / 22.1
     )
     encounter_hit = buffed_hit + 3 * ('imp_ff' in stat_debuffs)
+    encounter_mp5 = buffed_mp5 + 50 * ('mana_spring_totem' in other_buffs)
 
     # Calculate bonus damage parameters
     encounter_weapon_damage = (
@@ -1154,7 +1157,7 @@ def create_player(
         attack_power=encounter_AP, hit_chance=encounter_hit / 100,
         expertise_rating=expertise_rating, crit_chance=encounter_crit / 100,
         swing_timer=buffed_swing_timer, mana=buffed_mana_pool,
-        intellect=buffed_int, spirit=buffed_spirit, mp5=buffed_mp5,
+        intellect=buffed_int, spirit=buffed_spirit, mp5=encounter_mp5,
         omen='omen' in other_buffs, feral_aggression=int(feral_aggression),
         savage_fury=int(savage_fury),
         natural_shapeshifter=int(natural_shapeshifter),
@@ -1198,12 +1201,13 @@ def apply_buffs(
         + 35 * ('agi_elixir' in consumables) + 20 * ('food' in consumables)
         + 20 * ('scroll_agi' in consumables)
     ))
-    buffed_int = stat_multiplier * (
-        unbuffed_int + 1.2 * 1.03 * (added_stats + 40 * ('ai' in raid_buffs))
-    )
+    buffed_int = stat_multiplier * (unbuffed_int + 1.2 * 1.03 * (
+        added_stats + 40 * ('ai' in raid_buffs)
+        + 30 * ('draenic' in consumables)
+    ))
     buffed_spirit = stat_multiplier * (unbuffed_spirit + 1.03 * (
         added_stats + 50 * ('spirit' in raid_buffs)
-        + 20 * ('food' in consumables)
+        + 20 * ('food' in consumables) + 30 * ('draenic' in consumables)
     ))
 
     # Now augment secondary stats
