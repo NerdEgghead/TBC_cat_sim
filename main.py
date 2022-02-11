@@ -24,43 +24,32 @@ app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
 server = app.server
 
 default_input_stats = {
-    "agility": 587,
-    "arcaneDamage": 0,
-    "armor": 4048,
-    "attackPower": 3064,
-    "crit": 41.19,
-    "critRating": 127,
+    "agility": 576,
+    "armor": 5058,
+    "attackPower": 3404,
+    "crit": 41.34,
+    "critRating": 140,
     "critReduction": 3,
-    "defense": 352,
-    "defenseRating": 5,
-    "dodge": 43.13,
-    "expertise": 11,
-    "expertiseRating": 45,
-    "feralAttackPower": 1010,
-    "fireDamage": 0,
-    "frostDamage": 0,
-    "haste": 0,
-    "healing": 0,
-    "health": 7974,
-    "hit": 5.71,
-    "hitRating": 90,
-    "holyDamage": 0,
-    "intellect": 197,
-    "mana": 5045,
-    "natureDamage": 0,
-    "natureResist": 10,
-    "parry": 5.08,
-    "resilience": 1,
-    "resilienceRating": 52,
-    "shadowDamage": 0,
-    "spellCrit": 4.31,
-    "spellDamage": 0,
-    "spellHaste": 0,
-    "spellHit": 0,
-    "spirit": 165,
-    "stamina": 454,
-    "strength": 227,
+    "defense": 350,
+    "dodge": 42.3,
+    "expertise": 6,
+    "expertiseRating": 25,
+    "feralAttackPower": 1110,
+    "health": 8754,
+    "hit": 5.45,
+    "hitRating": 86,
+    "intellect": 242,
     "mainHandSpeed": 2,
+    "mana": 5720,
+    "natureResist": 10,
+    "parry": 5,
+    "resilience": 1.32,
+    "resilienceRating": 52,
+    "spellCrit": 4.88,
+    "spirit": 161,
+    "stamina": 532,
+    "strength": 398,
+    "weaponDamage": 5
 }
 
 stat_input = dbc.Col([
@@ -131,7 +120,7 @@ stat_input = dbc.Col([
     ], width='auto', style={'marginBottom': '2.5%', 'marginLeft': '2.5%'})
 
 buffs_1 = dbc.Col(
-    [html.H5('Consumables'),
+    [dbc.Collapse([html.H5('Consumables'),
      dbc.Checklist(
          options=[{'label': 'Elixir of Major Agility', 'value': 'agi_elixir'},
                   {'label': 'Warp Burger / Grilled Mudfish', 'value': 'food'},
@@ -170,7 +159,7 @@ buffs_1 = dbc.Col(
          value=['talent'], id='bshout_options',
          style={'marginLeft': '10%'},
      ),
-     html.Br(),
+     html.Br()], id='buff_section', is_open=True),
      html.H5('Other Buffs'),
      dbc.Checklist(
          options=[
@@ -1082,23 +1071,77 @@ def process_trinkets(trinket_1, trinket_2, player, ap_mod, stat_mod, cd_delay):
     return all_trinkets
 
 
-def create_buffed_player(
-        unbuffed_strength, unbuffed_agi, unbuffed_int, unbuffed_spirit,
-        unbuffed_ap, unbuffed_crit, unbuffed_hit, haste_rating,
-        expertise_rating, armor_pen, weapon_damage, weapon_speed,
-        unbuffed_mana, unbuffed_mp5, consumables, raid_buffs, bshout_options,
-        num_mcp, other_buffs, stat_debuffs, surv_agi, cooldowns,
-        feral_aggression, savage_fury, naturalist, natural_shapeshifter,
-        ferocious_inspiration, intensity, potion, bonuses, raven_idol
+def create_player(
+        buffed_attack_power, buffed_hit, buffed_crit, buffed_weapon_damage,
+        haste_rating, expertise_rating, armor_pen, buffed_mana_pool,
+        buffed_int, buffed_spirit, buffed_mp5, weapon_speed, unleashed_rage,
+        kings, raven_idol, other_buffs, stat_debuffs, cooldowns, num_mcp,
+        surv_agi, ferocious_inspiration, bonuses, naturalist, feral_aggression,
+        savage_fury, natural_shapeshifter, intensity, potion
 ):
-    """Compute fully raid buffed stats based on specified raid buffs, and
-    instantiate a Player object with those stats."""
+    """Takes in raid buffed player stats from Seventy Upgrades, modifies them
+    based on boss debuffs and miscellaneous buffs not captured by Seventy
+    Upgrades, and instantiates a Player object with those stats."""
 
     # Swing timer calculation is independent of other buffs. First we add up
     # the haste rating from all the specified haste buffs
     use_mcp = ('mcp' in cooldowns) and (num_mcp > 0)
     buffed_haste_rating = haste_rating + 500 * use_mcp
     buffed_swing_timer = ccs.calc_swing_timer(buffed_haste_rating)
+
+    # Augment secondary stats as needed
+    ap_mod = 1.1 * (1 + 0.1 * unleashed_rage)
+    encounter_AP = buffed_attack_power + ap_mod * (
+        100 * ('consec' in other_buffs)
+        + 110 * ('hunters_mark' in stat_debuffs)
+        + 0.25 * surv_agi * ('expose' in stat_debuffs)
+    )
+    encounter_crit = (
+        buffed_crit + 3 * ('jotc' in stat_debuffs)
+        + (28 * ('be_chain' in other_buffs) + 20 * bool(raven_idol)) / 22.1
+    )
+    encounter_hit = buffed_hit + 3 * ('imp_ff' in stat_debuffs)
+
+    # Calculate bonus damage parameters
+    encounter_weapon_damage = (
+        buffed_weapon_damage + ('bogling_root' in other_buffs)
+    )
+    damage_multiplier = (
+        (1 + 0.02 * int(naturalist)) * 1.03**ferocious_inspiration
+        * (1 + 0.02 * ('sanc_aura' in other_buffs))
+    )
+    shred_bonus = 88 * ('everbloom' in bonuses) + 75 * ('t5_bonus' in bonuses)
+
+    # Create and return a corresponding Player object
+    player = ccs.Player(
+        attack_power=encounter_AP, hit_chance=encounter_hit / 100,
+        expertise_rating=expertise_rating, crit_chance=encounter_crit / 100,
+        swing_timer=buffed_swing_timer, mana=buffed_mana_pool,
+        intellect=buffed_int, spirit=buffed_spirit, mp5=buffed_mp5,
+        omen='omen' in other_buffs, feral_aggression=int(feral_aggression),
+        savage_fury=int(savage_fury),
+        natural_shapeshifter=int(natural_shapeshifter),
+        intensity=int(intensity), weapon_speed=weapon_speed,
+        bonus_damage=encounter_weapon_damage, multiplier=damage_multiplier,
+        jow='jow' in stat_debuffs, armor_pen=armor_pen,
+        t4_bonus='t4_bonus' in bonuses, t6_2p='t6_2p' in bonuses,
+        t6_4p='t6_4p' in bonuses, wolfshead='wolfshead' in bonuses,
+        meta='meta' in bonuses, rune='rune' in cooldowns,
+        pot=potion in ['super', 'fel'], cheap_pot=(potion == 'super'),
+        shred_bonus=shred_bonus
+    )
+    return player, ap_mod, (1 + 0.1 * kings) * 1.03
+
+
+def apply_buffs(
+        unbuffed_ap, unbuffed_strength, unbuffed_agi, unbuffed_hit,
+        unbuffed_crit, unbuffed_mana, unbuffed_int, unbuffed_spirit,
+        unbuffed_mp5, weapon_damage, raid_buffs, consumables, bshout_options
+):
+    """Takes in unbuffed player stats, and turns them into buffed stats based
+    on specified consumables and raid buffs. This function should only be
+    called if the "Buffs" option is not checked in the exported file from
+    Seventy Upgrades, or else the buffs will be double counted!"""
 
     # Determine "raw" AP, crit, and mana not from Str/Agi/Int
     raw_ap_unbuffed = unbuffed_ap / 1.1 - 2 * unbuffed_strength - unbuffed_agi
@@ -1107,14 +1150,14 @@ def create_buffed_player(
 
     # Augment all base stats based on specified buffs
     stat_multiplier = 1 + 0.1 * ('kings' in raid_buffs)
-    added_stats = 18.9 * ('motw' in raid_buffs)
+    added_stats = 18 * ('motw' in raid_buffs)
 
     buffed_strength = stat_multiplier * (unbuffed_strength + 1.03 * (
-        added_stats + 88.55 * ('str_totem' in raid_buffs)
+        added_stats + 98 * ('str_totem' in raid_buffs)
         + 20 * ('scroll_str' in consumables)
     ))
     buffed_agi = stat_multiplier * (unbuffed_agi + 1.03 * (
-        added_stats + 88.55 * ('agi_totem' in raid_buffs)
+        added_stats + 88 * ('agi_totem' in raid_buffs)
         + 35 * ('agi_elixir' in consumables) + 20 * ('food' in consumables)
         + 20 * ('scroll_agi' in consumables)
     ))
@@ -1129,64 +1172,42 @@ def create_buffed_player(
     # Now augment secondary stats
     ap_mod = 1.1 * (1 + 0.1 * ('unleashed_rage' in raid_buffs))
     bshout_ap = (
-        ('bshout' in raid_buffs) * (306 + 70 * ('trinket' in bshout_options))
+        ('bshout' in raid_buffs) * (305 + 70 * ('trinket' in bshout_options))
         * (1. + 0.25 * ('talent' in bshout_options))
     )
     buffed_attack_power = ap_mod * (
         raw_ap_unbuffed + 2 * buffed_strength + buffed_agi
-        + 222 * ('might' in raid_buffs) + bshout_ap
-        + 100 * ('trueshot_aura' in raid_buffs)
-        + 100 * ('consec' in other_buffs)
-        + 110 * ('hunters_mark' in stat_debuffs)
-        + 0.25 * surv_agi * ('expose' in stat_debuffs)
+        + 264 * ('might' in raid_buffs) + bshout_ap
+        + 125 * ('trueshot_aura' in raid_buffs)
     )
     added_crit_rating = (
         20 * ('agi_elixir' in consumables)
         + 14 * ('weightstone' in consumables)
-        + 28 * ('be_chain' in other_buffs)
-        + 20 * bool(raven_idol)
     )
     buffed_crit = (
-        raw_crit_unbuffed + buffed_agi / 25 + 3 * ('jotc' in stat_debuffs)
-        + added_crit_rating / 22.1
+        raw_crit_unbuffed + buffed_agi / 25 + added_crit_rating / 22.1
     )
     buffed_hit = (
-        unbuffed_hit + 3 * ('imp_ff' in stat_debuffs)
-        + 1 * ('heroic_presence' in raid_buffs)
+        unbuffed_hit + 1 * ('heroic_presence' in raid_buffs)
     )
     buffed_mana_pool = raw_mana_unbuffed + buffed_int * 15
-    buffed_mp5 = unbuffed_mp5 + 39.6 * ('wisdom' in raid_buffs)
+    buffed_mp5 = unbuffed_mp5 + 49 * ('wisdom' in raid_buffs)
+    buffed_weapon_damage = (
+        12 * ('weightstone' in consumables) + weapon_damage
+    )
 
-    # Calculate bonus damage parameters
-    bonus_weapon_damage = (
-        12 * ('weightstone' in consumables) + ('bogling_root' in other_buffs)
-        + weapon_damage
-    )
-    damage_multiplier = (
-        (1 + 0.02 * int(naturalist)) * 1.03**ferocious_inspiration
-        * (1 + 0.02 * ('sanc_aura' in other_buffs))
-    )
-    shred_bonus = 88 * ('everbloom' in bonuses) + 75 * ('t5_bonus' in bonuses)
-
-    # Create and return a corresponding Player object
-    player = ccs.Player(
-        attack_power=buffed_attack_power, hit_chance=buffed_hit / 100,
-        expertise_rating=expertise_rating, crit_chance=buffed_crit / 100,
-        swing_timer=buffed_swing_timer, mana=buffed_mana_pool,
-        intellect=buffed_int, spirit=buffed_spirit, mp5=buffed_mp5,
-        omen='omen' in other_buffs, feral_aggression=int(feral_aggression),
-        savage_fury=int(savage_fury),
-        natural_shapeshifter=int(natural_shapeshifter),
-        intensity=int(intensity), weapon_speed=weapon_speed,
-        bonus_damage=bonus_weapon_damage, multiplier=damage_multiplier,
-        jow='jow' in stat_debuffs, armor_pen=armor_pen,
-        t4_bonus='t4_bonus' in bonuses, t6_2p='t6_2p' in bonuses,
-        t6_4p='t6_4p' in bonuses, wolfshead='wolfshead' in bonuses,
-        meta='meta' in bonuses, rune='rune' in cooldowns,
-        pot=potion in ['super', 'fel'], cheap_pot=(potion == 'super'),
-        shred_bonus=shred_bonus
-    )
-    return player, ap_mod, stat_multiplier * 1.03
+    return {
+        'strength': buffed_strength,
+        'agility': buffed_agi,
+        'intellect': buffed_int,
+        'spirit': buffed_spirit,
+        'attackPower': buffed_attack_power,
+        'crit': buffed_crit,
+        'hit': buffed_hit,
+        'weaponDamage': buffed_weapon_damage,
+        'mana': buffed_mana_pool,
+        'mp5': buffed_mp5
+    }
 
 
 def run_sim(sim, num_replicates):
@@ -1362,6 +1383,7 @@ def plot_new_trajectory(sim, show_whites):
 @app.callback(
     Output('upload_status', 'children'),
     Output('upload_status', 'style'),
+    Output('buff_section', 'is_open'),
     Output('buffed_swing_timer', 'children'),
     Output('buffed_attack_power', 'children'),
     Output('buffed_crit', 'children'),
@@ -1436,11 +1458,13 @@ def compute(
     ctx = dash.callback_context
 
     # Parse input stats JSON
+    buffs_present = False
+
     if json_file is None:
-        input_stats = default_input_stats
+        input_stats = copy.copy(default_input_stats)
         upload_output = (
             'No file uploaded, using default input stats instead.',
-            {'color': '#E59F3A', 'width': 300}
+            {'color': '#E59F3A', 'width': 300}, True
         )
     else:
         try:
@@ -1454,37 +1478,63 @@ def compute(
                     'Upload successful. Buffs detected in Seventy Upgrades '
                     'export, so the "Consumables" and "Raid Buffs" sections in'
                     ' the sim input will be ignored.',
-                    {'color': '#5AB88F', 'width': 300},
+                    {'color': '#5AB88F', 'width': 300}, False
                 )
             else:
                 upload_output = (
                     'Upload successful. No buffs detected in Seventy Upgrades '
                     'export, so use the  "Consumables" and "Raid Buffs" '
                     'sections in the sim input for buff entry.',
-                    {'color': '#5AB88F', 'width': 300},
+                    {'color': '#5AB88F', 'width': 300}, True
                 )
 
             input_stats = input_json['stats']
         except Exception:
-            input_stats = default_input_stats
+            input_stats = copy.copy(default_input_stats)
             upload_output = (
                 'Error processing input file! Using default input stats '
                 'instead.',
-                {'color': '#D35845', 'width': 300}
+                {'color': '#D35845', 'width': 300}, True
             )
 
-    # Create Player object based on specified stat inputs and talents
-    player, ap_mod, stat_mod = create_buffed_player(
-        input_stats['strength'], input_stats['agility'],
-        input_stats['intellect'], input_stats['spirit'],
-        input_stats['attackPower'], input_stats['crit'], input_stats['hit'],
-        input_stats.get('hasteRating', 0), input_stats['expertiseRating'],
-        input_stats.get('armorPen', 0), input_stats.get('weaponDamage', 0),
-        float(input_stats['mainHandSpeed']), input_stats['mana'],
-        input_stats.get('mp5', 0), consumables, raid_buffs, bshout_options,
-        num_mcp, other_buffs, stat_debuffs, surv_agi, cooldowns,
-        feral_aggression, savage_fury, naturalist, natural_shapeshifter,
-        ferocious_inspiration, intensity, potion, bonuses, raven_idol
+    # If buffs are not specified in the input file, then interpret the input
+    # stats as unbuffed and calculate the buffed stats ourselves.
+    if not buffs_present:
+        input_stats.update(apply_buffs(
+            input_stats['attackPower'], input_stats['strength'],
+            input_stats['agility'], input_stats['hit'], input_stats['crit'],
+            input_stats['mana'], input_stats['intellect'],
+            input_stats['spirit'], input_stats.get('mp5', 0),
+            input_stats.get('weaponDamage', 0), raid_buffs, consumables,
+            bshout_options
+        ))
+
+    # Determine whether Unleashed Rage and/or Blessing of Kings are present, as
+    # these impact stat weights and buff values.
+    if buffs_present:
+        unleashed_rage = False
+        kings = False
+
+        for buff in input_json['buffs']:
+            if buff['name'] == 'Blessing of Kings':
+                kings = True
+            if buff['name'] == 'Unleashed Rage':
+                unleashed_rage = True
+    else:
+        unleashed_rage = 'unleashed_rage' in raid_buffs
+        kings = 'kings' in raid_buffs
+
+    # Create Player object based on raid buffed stat inputs and talents
+    player, ap_mod, stat_mod = create_player(
+        input_stats['attackPower'], input_stats['hit'], input_stats['crit'],
+        input_stats.get('weaponDamage', 0), input_stats.get('hasteRating', 0),
+        input_stats.get('expertiseRating', 0), input_stats.get('armorPen', 0),
+        input_stats['mana'], input_stats['intellect'], input_stats['spirit'],
+        input_stats.get('mp5', 0), float(input_stats['mainHandSpeed']),
+        unleashed_rage, kings, raven_idol, other_buffs, stat_debuffs,
+        cooldowns, num_mcp, surv_agi, ferocious_inspiration, bonuses,
+        naturalist, feral_aggression, savage_fury, natural_shapeshifter,
+        intensity, potion
     )
 
     # Process trinkets
