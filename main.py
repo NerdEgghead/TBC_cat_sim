@@ -847,20 +847,36 @@ weights_section = dbc.Col([
                     color='info'
                 ), width='auto'),
                 dbc.Col(
-                    dbc.FormGroup(
-                        [
-                            dbc.Checkbox(
-                                id='calc_mana_weights',
-                                className='form-check-input'
-                            ),
-                            dbc.Label(
-                                'Include mana weights',
-                                html_for='calc_mana_weights',
-                                className='form-check-label'
-                            )
-                        ],
-                        check=True
-                    ),
+                    [
+                        dbc.FormGroup(
+                            [
+                                dbc.Checkbox(
+                                    id='calc_mana_weights',
+                                    className='form-check-input', checked=False
+                                ),
+                                dbc.Label(
+                                    'Include mana weights',
+                                    html_for='calc_mana_weights',
+                                    className='form-check-label'
+                                )
+                            ],
+                            check=True
+                        ),
+                        dbc.FormGroup(
+                            [
+                                dbc.Checkbox(
+                                    id='epic_gems',
+                                    className='form-check-input', checked=True
+                                ),
+                                dbc.Label(
+                                    'Assume Epic gems',
+                                    html_for='epic_gems',
+                                    className='form-check-label'
+                                )
+                            ],
+                            check=True
+                        ),
+                    ],
                     width='auto'
                 )
             ]
@@ -1290,7 +1306,7 @@ def append_mana_weights(
 
 def calc_weights(
         sim, num_replicates, avg_dps, calc_mana_weights, time_to_oom,
-        raid_buffs, unleashed_rage
+        kings, unleashed_rage, epic_gems
 ):
     # Check that sufficient iterations are used for convergence.
     if num_replicates < 20000:
@@ -1323,8 +1339,10 @@ def calc_weights(
         ]))
 
     # Generate 70upgrades import link for raw stats
-    stat_multiplier = (1 + 0.1 * ('kings' in raid_buffs)) * 1.03
-    url = ccs.gen_import_link(stat_weights, multiplier=stat_multiplier)
+    stat_multiplier = (1 + 0.1 * kings) * 1.03
+    url = ccs.gen_import_link(
+        stat_weights, multiplier=stat_multiplier, epic_gems=epic_gems
+    )
     link = html.A('Seventy Upgrades Import Link', href=url, target='_blank')
 
     # Only calculate mana stats if requested
@@ -1443,6 +1461,7 @@ def plot_new_trajectory(sim, show_whites):
     State('bear_mangle', 'value'),
     State('num_replicates', 'value'),
     State('calc_mana_weights', 'checked'),
+    State('epic_gems', 'checked'),
     State('show_whites', 'checked'))
 def compute(
         json_file, consumables, raid_buffs, bshout_options, num_mcp,
@@ -1453,7 +1472,7 @@ def compute(
         boss_debuffs, cooldowns, finisher, rip_cp, bite_cp, max_wait_time,
         cd_delay, prepop_TF, prepop_numticks, use_mangle_trick, use_innervate,
         use_bite, bite_time, bear_mangle, num_replicates, calc_mana_weights,
-        show_whites
+        epic_gems, show_whites
 ):
     ctx = dash.callback_context
 
@@ -1627,7 +1646,7 @@ def compute(
             (ctx.triggered[0]['prop_id'] == 'weight_button.n_clicks')):
         weights_output = calc_weights(
             sim, num_replicates, avg_dps, calc_mana_weights, dps_output[2],
-            raid_buffs, 'unleashed_rage' in raid_buffs
+            kings, unleashed_rage, epic_gems
         )
     else:
         weights_output = ('Stat Breakdown', '', [], '')
