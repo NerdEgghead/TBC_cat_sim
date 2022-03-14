@@ -205,9 +205,9 @@ class Player():
             armor_pen, swing_timer, mana, intellect, spirit, mp5, jow=False,
             pot=True, cheap_pot=False, rune=True, t4_bonus=False, t6_2p=False,
             t6_4p=False, wolfshead=True, meta=False, bonus_damage=0,
-            shred_bonus=0, multiplier=1.1, omen=True, feral_aggression=0,
-            savage_fury=2, natural_shapeshifter=3, intensity=3,
-            weapon_speed=3.0, proc_trinkets=[], log=False
+            shred_bonus=0, debuff_ap=0, multiplier=1.1, omen=True,
+            feral_aggression=0, savage_fury=2, natural_shapeshifter=3,
+            intensity=3, weapon_speed=3.0, proc_trinkets=[], log=False
     ):
         """Initialize player with key damage parameters.
 
@@ -244,6 +244,10 @@ class Player():
                 Root or Dense Weightstone. Defaults to 0.
             shred_bonus (int): Bonus damage to Shred ability from Idols and set
                 bonuses. Defaults to 0.
+            debuff_ap (int): Bonus Attack Power from boss debuffs such as
+                Improved Hunter's Mark or Expose Weakness. Treated differently
+                from "normal" AP because it does not boost abilities with
+                explicit AP scaling. Defaults to 0.
             multiplier (float): Overall damage multiplier from talents and
                 buffs. Defaults to 1.1 (from 5/5 Naturalist).
             omen (bool): Whether Omen of Clarity is active. Defaults True.
@@ -264,6 +268,7 @@ class Player():
                 points]. Defaults False.
         """
         self.attack_power = attack_power
+        self.debuff_ap = debuff_ap
 
         # Set internal hit and expertise values, and derive total miss chance.
         self._hit_chance = hit_chance
@@ -363,7 +368,8 @@ class Player():
         """Calculate high and low end damage of all abilities as a function of
         specified boss debuffs."""
         bonus_damage = (
-            self.attack_power/14 + self.bonus_damage + 40 * tigers_fury
+            (self.attack_power + self.debuff_ap) / 14 + self.bonus_damage
+            + 40 * tigers_fury
         )
 
         # Legacy compatibility with older Sunder code in case it is needed

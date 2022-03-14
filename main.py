@@ -1130,7 +1130,7 @@ def create_player(
 
     # Augment secondary stats as needed
     ap_mod = 1.1 * (1 + 0.1 * unleashed_rage)
-    encounter_AP = buffed_attack_power + ap_mod * (
+    debuff_ap = (
         100 * ('consec' in other_buffs)
         + 110 * ('hunters_mark' in stat_debuffs)
         + 0.25 * surv_agi * ('expose' in stat_debuffs)
@@ -1154,7 +1154,7 @@ def create_player(
 
     # Create and return a corresponding Player object
     player = ccs.Player(
-        attack_power=encounter_AP, hit_chance=encounter_hit / 100,
+        attack_power=buffed_attack_power, hit_chance=encounter_hit / 100,
         expertise_rating=expertise_rating, crit_chance=encounter_crit / 100,
         swing_timer=buffed_swing_timer, mana=buffed_mana_pool,
         intellect=buffed_int, spirit=buffed_spirit, mp5=encounter_mp5,
@@ -1168,7 +1168,7 @@ def create_player(
         t6_4p='t6_4p' in bonuses, wolfshead='wolfshead' in bonuses,
         meta='meta' in bonuses, rune='rune' in cooldowns,
         pot=potion in ['super', 'fel'], cheap_pot=(potion == 'super'),
-        shred_bonus=shred_bonus
+        shred_bonus=shred_bonus, debuff_ap=debuff_ap
     )
     return player, ap_mod, (1 + 0.1 * kings) * 1.03
 
