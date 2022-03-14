@@ -165,6 +165,9 @@ def gen_import_link(
     # Armor Penetration
     link += '&44=%.2f' % stat_weights['1 Armor Pen']
 
+    # Weapon Damage
+    link += '&51=%.2f' % stat_weights['1 Weapon Damage']
+
     # Gems
     gem_agi = 10 if epic_gems else 8
     gem_weight = agi_weight * gem_agi
