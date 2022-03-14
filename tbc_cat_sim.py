@@ -434,7 +434,7 @@ class Player():
 
             bite_damage = getattr(self, 'bite_%s' % bound)
 
-            for cp in [4, 5]:
+            for cp in range(1, 6):
                 bite_damage[cp] += 8 * armor_multiplier
 
     def reset(self):
