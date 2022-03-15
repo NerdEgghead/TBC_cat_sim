@@ -1532,9 +1532,9 @@ def compute(
 
     # Parse input stats JSON
     buffs_present = False
+    use_default_inputs = True
 
     if json_file is None:
-        input_stats = copy.copy(default_input_stats)
         upload_output = (
             'No file uploaded, using default input stats instead.',
             {'color': '#E59F3A', 'width': 300}, True
@@ -1545,14 +1545,41 @@ def compute(
             decoded = base64.b64decode(content_string)
             input_json = json.load(io.StringIO(decoded.decode('utf-8')))
             buffs_present = input_json['exportOptions']['buffs']
+            catform_checked = (
+                ('form' in input_json['exportOptions'])
+                and (input_json['exportOptions']['form'] == 'cat')
+            )
 
-            if buffs_present:
+            if not catform_checked:
                 upload_output = (
-                    'Upload successful. Buffs detected in Seventy Upgrades '
-                    'export, so the "Consumables" and "Raid Buffs" sections in'
-                    ' the sim input will be ignored.',
-                    {'color': '#5AB88F', 'width': 300}, False
+                    'Error processing input file! "Cat Form" was not checked '
+                    'in the export pop-up window. Using default input stats '
+                    'instead.',
+                    {'color': '#D35845', 'width': 300}, True
                 )
+            elif buffs_present:
+                pot_present = False
+
+                for entry in input_json['consumables']:
+                    if 'Potion' in entry['name']:
+                        pot_present = True
+
+                if pot_present:
+                    upload_output = (
+                        'Error processing input file! Potions should not be '
+                        'checked in the Seventy Upgrades buff tab, as they are'
+                        ' temporary rather than permanent stat buffs. Using'
+                        ' default input stats instead.',
+                        {'color': '#D35845', 'width': 300}, True
+                    )
+                else:
+                    upload_output = (
+                        'Upload successful. Buffs detected in Seventy Upgrades'
+                        ' export, so the "Consumables" and "Raid Buffs" '
+                        'sections in the sim input will be ignored.',
+                        {'color': '#5AB88F', 'width': 300}, False
+                    )
+                    use_default_inputs = False
             else:
                 upload_output = (
                     'Upload successful. No buffs detected in Seventy Upgrades '
@@ -1560,15 +1587,19 @@ def compute(
                     'sections in the sim input for buff entry.',
                     {'color': '#5AB88F', 'width': 300}, True
                 )
-
-            input_stats = input_json['stats']
+                use_default_inputs = False
         except Exception:
-            input_stats = copy.copy(default_input_stats)
             upload_output = (
                 'Error processing input file! Using default input stats '
                 'instead.',
                 {'color': '#D35845', 'width': 300}, True
             )
+
+    if use_default_inputs:
+        input_stats = copy.copy(default_input_stats)
+        buffs_present = False
+    else:
+        input_stats = input_json['stats']
 
     # If buffs are not specified in the input file, then interpret the input
     # stats as unbuffed and calculate the buffed stats ourselves.
