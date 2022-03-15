@@ -446,7 +446,7 @@ iteration_input = dbc.Col([
                     {'label': '4', 'value': 4},
                     {'label': '5', 'value': 5},
                 ],
-                value=5, id='rip_cp',
+                value=4, id='rip_cp',
             ),
         ],
         style={'width': '48%', 'marginBottom': '1.5%'}
@@ -463,7 +463,7 @@ iteration_input = dbc.Col([
                     {'label': '4', 'value': 4},
                     {'label': '5', 'value': 5},
                 ],
-                value=5, id='bite_cp',
+                value=4, id='bite_cp',
             ),
         ],
         style={'width': '60%', 'marginBottom': '1.5%'}
@@ -496,6 +496,36 @@ iteration_input = dbc.Col([
     html.Br(),
     dbc.Row([
         dbc.Col(dbc.Checklist(
+            options=[{'label': " weave Ferocious Bite", 'value': 'bite'}],
+            value=['bite'], id='use_biteweave',
+        ), width='auto'),
+        dbc.Col('with', width='auto', id='biteweave_text_1'),
+        dbc.Col(dbc.Input(
+            type='number', value=0, id='bite_time', min=0.0, step=0.1,
+            style={'marginTop': '-3%', 'marginBottom': '7%', 'width': '40%'},
+        ), width='auto'),
+        dbc.Col(
+            'seconds left on Rip', width='auto', style={'marginLeft': '-15%'},
+            id='biteweave_text_2'
+        )
+    ],),
+    dbc.Row([
+        dbc.Col(dbc.Checklist(
+            options=[{'label': " weave Rip", 'value': 'rip'}], value=[],
+            id='use_ripweave',
+        ), width='auto'),
+        dbc.Col('at', width='auto', id='ripweave_text_1'),
+        dbc.Col(dbc.Input(
+            type='number', value=52, id='ripweave_energy', min=30, step=1,
+            style={'marginTop': '-3%', 'marginBottom': '7%', 'width': '40%'},
+        ), width='auto'),
+        dbc.Col(
+            'energy or above', width='auto', style={'marginLeft': '-15%'},
+            id='ripweave_text_2'
+        )
+    ],),
+    dbc.Row([
+        dbc.Col(dbc.Checklist(
             options=[{'label': " pre-pop Tiger's Fury", 'value': 'prepop_TF'}],
             value=[], id='prepop_TF',
         ), width='auto'),
@@ -520,13 +550,16 @@ iteration_input = dbc.Col([
             options=[{'label': ' use Bite trick', 'value': 'use_bite_trick'}],
             value=[], id='use_bite_trick'
         ), width='auto'),
-        dbc.Col('with at least', width='auto'),
+        dbc.Col('with at least', width='auto', id='bite_trick_text_1'),
         dbc.Col(dbc.Select(
             options=[{'label':  i, 'value': i} for i in range(1, 6)],
             value=2, id='bite_trick_cp',
             style={'marginTop': '-7%'},
         ), width='auto'),
-        dbc.Col('combo points, and an energy range up to', width='auto'),
+        dbc.Col(
+            'combo points, and an energy range up to', width='auto',
+            id='bite_trick_text_2'
+        ),
         dbc.Col(dbc.Input(
             type='number', value=39, id='bite_trick_max', min=35, step=1,
             style={'marginTop': '-7%', 'width': '40%'},
@@ -536,20 +569,6 @@ iteration_input = dbc.Col([
         options=[{'label': ' use Innervate', 'value': 'use_innervate'}],
         value=[], id='use_innervate'
     ),
-    dbc.Row([
-        dbc.Col(dbc.Checklist(
-            options=[{'label': " use Ferocious Bite with", 'value': 'bite'}],
-            value=['bite'], id='use_bite',
-        ), width='auto'),
-        dbc.Col('with', width='auto'),
-        dbc.Col(dbc.Input(
-            type='number', value=0, id='bite_time', min=0.0, step=0.1,
-            style={'marginTop': '-7%', 'width': '40%'},
-        ), width='auto'),
-        dbc.Col(
-            'seconds left on Rip', width='auto', style={'marginLeft': '-15%'}
-        )
-    ],),
     dbc.Checklist(
         options=[{
             'label': ' Mangle maintained by bear tank', 'value': 'bear_mangle'
@@ -1488,8 +1507,10 @@ def plot_new_trajectory(sim, show_whites):
     State('bite_trick_cp', 'value'),
     State('bite_trick_max', 'value'),
     State('use_innervate', 'value'),
-    State('use_bite', 'value'),
+    State('use_biteweave', 'value'),
     State('bite_time', 'value'),
+    State('use_ripweave', 'value'),
+    State('ripweave_energy', 'value'),
     State('bear_mangle', 'value'),
     State('num_replicates', 'value'),
     State('calc_mana_weights', 'checked'),
@@ -1504,8 +1525,8 @@ def compute(
         boss_debuffs, cooldowns, finisher, rip_cp, bite_cp, max_wait_time,
         cd_delay, prepop_TF, prepop_numticks, use_mangle_trick, use_rake_trick,
         use_bite_trick, bite_trick_cp, bite_trick_max, use_innervate,
-        use_bite, bite_time, bear_mangle, num_replicates, calc_mana_weights,
-        epic_gems, show_whites
+        use_biteweave, bite_time, use_ripweave, ripweave_energy, bear_mangle,
+        num_replicates, calc_mana_weights, epic_gems, show_whites
 ):
     ctx = dash.callback_context
 
@@ -1606,8 +1627,11 @@ def compute(
 
     # Create Simulation object based on specified parameters
     max_mcp = num_mcp if 'mcp' in cooldowns else 0
-    bite = (bool(use_bite) and (finisher == 'rip')) or (finisher == 'bite')
+    bite = (
+        (bool(use_biteweave) and (finisher == 'rip')) or (finisher == 'bite')
+    )
     rip_combos = 6 if finisher != 'rip' else int(rip_cp)
+    ripweave_combos = 6 if finisher != 'bite' else int(rip_cp)
 
     if 'lust' in cooldowns:
         trinket_list.append(trinkets.Bloodlust(delay=cd_delay))
@@ -1662,8 +1686,10 @@ def compute(
         use_bite_trick=bool(use_bite_trick), bite_trick_cp=int(bite_trick_cp),
         bite_trick_max=bite_trick_max,
         use_mangle_trick=bool(use_mangle_trick), use_bite=bite,
-        bite_time=bite_time, bear_mangle=bool(bear_mangle),
-        trinkets=trinket_list, max_wait_time=max_wait_time, haste_pot=haste_pot
+        bite_time=bite_time, use_rip_trick=bool(use_ripweave),
+        rip_trick_cp=ripweave_combos, rip_trick_min=ripweave_energy,
+        bear_mangle=bool(bear_mangle), trinkets=trinket_list,
+        max_wait_time=max_wait_time, haste_pot=haste_pot
     )
     sim.set_active_debuffs(boss_debuffs)
     player.calc_damage_params(**sim.params)
@@ -1697,6 +1723,77 @@ def compute(
     return (
         upload_output + stats_output + dps_output + weights_output
         + example_output
+    )
+
+
+# Callbacks for disabling rotation options when inappropriate
+@app.callback(
+    Output('use_rake_trick', 'options'),
+    Output('use_bite_trick', 'options'),
+    Output('use_rake_trick', 'labelStyle'),
+    Output('use_bite_trick', 'labelStyle'),
+    Output('bite_trick_text_1', 'style'),
+    Output('bite_trick_text_2', 'style'),
+    Input('bonuses', 'value'),
+    Input('use_rake_trick', 'value'),
+    Input('use_bite_trick', 'value'))
+def disable_tricks(bonuses, rake_trick_checked, bite_trick_checked):
+    rake_options = {'label': ' use Rake trick', 'value': 'use_rake_trick'}
+    bite_options = {'label': ' use Bite trick', 'value': 'use_bite_trick'}
+    rake_text_style = {}
+    bite_text_style = {}
+
+    if 't6_2p' in bonuses:
+        if rake_trick_checked:
+            rake_text_style['color'] = '#D35845'
+        else:
+            rake_options['disabled'] = True
+            rake_text_style['color'] = '#888888'
+
+        if bite_trick_checked:
+            bite_text_style['color'] = '#D35845'
+        else:
+            bite_options['disabled'] = True
+            bite_text_style['color'] = '#888888'
+
+    return (
+        [rake_options], [bite_options], rake_text_style, bite_text_style,
+        bite_text_style, bite_text_style
+    )
+
+
+@app.callback(
+    Output('use_biteweave', 'options'),
+    Output('use_biteweave', 'labelStyle'),
+    Output('biteweave_text_1', 'style'),
+    Output('biteweave_text_2', 'style'),
+    Output('use_ripweave', 'options'),
+    Output('use_ripweave', 'labelStyle'),
+    Output('ripweave_text_1', 'style'),
+    Output('ripweave_text_2', 'style'),
+    Input('finisher', 'value'))
+def disable_weaves(finisher):
+    biteweave_options = {'label': ' weave Ferocious Bite', 'value': 'bite'}
+    ripweave_options = {'label': ' weave Rip', 'value': 'rip'}
+    biteweave_text_style_1 = {}
+    biteweave_text_style_2 = {'marginLeft': '-15%'}
+    ripweave_text_style_1 = {}
+    ripweave_text_style_2 = {'marginLeft': '-15%'}
+
+    if finisher != 'rip':
+        biteweave_options['disabled'] = True
+        biteweave_text_style_1['color'] = '#888888'
+        biteweave_text_style_2['color'] = '#888888'
+
+    if finisher != 'bite':
+        ripweave_options['disabled'] = True
+        ripweave_text_style_1['color'] = '#888888'
+        ripweave_text_style_2['color'] = '#888888'
+
+    return (
+        [biteweave_options], biteweave_text_style_1, biteweave_text_style_1,
+        biteweave_text_style_2, [ripweave_options], ripweave_text_style_1,
+        ripweave_text_style_1, ripweave_text_style_2
     )
 
 

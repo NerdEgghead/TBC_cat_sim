@@ -6,7 +6,6 @@ import collections
 import urllib
 import multiprocessing
 import psutil
-import trinkets as trinks
 
 
 def calc_white_damage(low_end, high_end, miss_chance, crit_chance, meta=False):
@@ -998,6 +997,9 @@ class Simulation():
         'use_bite': False,
         'bite_time': 4.0,
         'min_combos_for_bite': 4,
+        'use_rip_trick': False,
+        'rip_trick_cp': 4,
+        'rip_trick_min': 52,
         'use_innervate': True,
         'bear_mangle': False,
         'max_wait_time': 2.0,
@@ -1232,7 +1234,16 @@ class Simulation():
         # fight.
         end_thresh = 10
         rip_now = (cp >= rip_cp) and (not self.rip_debuff)
-        rip_now = rip_now and (self.fight_length - time >= end_thresh)
+        ripweave_now = (
+            self.strategy['use_rip_trick']
+            and (cp >= self.strategy['rip_trick_cp']) and (not self.rip_debuff)
+            and (energy >= self.strategy['rip_trick_min'])
+            and (not self.player.omen_proc)
+        )
+        rip_now = (
+            (rip_now or ripweave_now)
+            and (self.fight_length - time >= end_thresh)
+        )
         bite_at_end = (
             (cp >= bite_cp) and (not self.strategy['no_finisher'])
             and ((self.fight_length - time < end_thresh) or (
