@@ -842,8 +842,8 @@ sim_output = dbc.Col([
     html.H5('DPS Breakdown'),
     dcc.Loading(children=dbc.Table([
         html.Thead(html.Tr([
-            html.Th('Ability'), html.Th('Number of Casts'),
-            html.Th('Average DPS'), html.Th('DPS Contribution')
+            html.Th('Ability'), html.Th('Number of Casts'), html.Th('CPM'),
+            html.Th('Damage per Cast'), html.Th('DPS Contribution')
         ])),
         html.Tbody(id='dps_breakdown_table')
     ]), id='loading_3', type='default'),
@@ -1280,10 +1280,13 @@ def run_sim(sim, num_replicates):
             continue
 
         ability_dps = dmg_breakdown[ability]['damage'] / sim.fight_length
+        ability_cpm = dmg_breakdown[ability]['casts'] / sim.fight_length * 60.
+        ability_dpct = ability_dps * 60. / ability_cpm if ability_cpm else 0.
         dps_table.append(html.Tr([
             html.Td(ability),
             html.Td('%.3f' % dmg_breakdown[ability]['casts']),
-            html.Td('%.3f' % ability_dps),
+            html.Td('%.1f' % ability_cpm),
+            html.Td('%.0f' % ability_dpct),
             html.Td('%.1f%%' % (ability_dps / avg_dps * 100))
         ]))
 
