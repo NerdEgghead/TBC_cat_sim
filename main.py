@@ -98,7 +98,7 @@ stat_input = dbc.Col([
     html.Br(),
     html.H5('Idols and Set Bonuses'),
     dbc.Checklist(
-        options=[{'label': 'Idol of the Raven Goddess', 'value': 'raven'}],
+        options=[{'label': 'Idol of the Cuck', 'value': 'raven'}],
         value=['raven'], id='raven_idol'
     ),
     dbc.Checklist(
