@@ -433,25 +433,62 @@ class ProcTrinket(Trinket):
         self.proc_happened = False
 
 
-class BadgeOfTheSwarmguard(ProcTrinket):
-    """Custom class to handle the unique behavior of stacking Badge procs."""
+class StackingProcTrinket(ProcTrinket):
+    """Models trinkets that provide temporary stacking buffs to the player
+    after an initial proc or activation."""
 
-    def __init__(self, white_chance_on_hit, yellow_chance_on_hit, *args):
-        """Initialize a Trinket object modeling Badge. Since Badge is a ppm
-        trinket, the user must pre-calculate the proc chances based on the
-        swing timer and equipped weapon speed.
+    def __init__(
+        self, stat_name, stat_increment, max_stacks, aura_name, stack_name,
+        chance_on_hit, yellow_chance_on_hit, aura_duration, cooldown,
+        aura_type='activated', aura_proc_rates=None
+    ):
+        """Initialize a generic stacking proc trinket with key parameters.
 
         Arguments:
-            white_chance_on_hit (float): Probability of a proc on a successful
-                normal hit, between 0 and 1.
-            yellow_chance_on_hit (float): Separate proc rate for special
+            stat_name (str): Name of the Player attribute that will be
+                modified when stacks are accumulated. Must be a valid attribute
+                of the Player class that can be modified. The one exception is
+                haste_rating, which is separately handled by the Simulation
+                object when updating timesteps for the sim.
+            stat_increment (int): Amount by which the Player attribute is
+                changed from one additional stack of the trinket buff.
+            max_stacks (int): Maximum number of stacks that can be accumulated.
+            aura_name (str): Name of the aura that is applied when the trinket
+                is active, allowing for stack accumulation. Used for combat
+                logging.
+            stack_name (str): Name of the actual stacking buff that procs when
+                the above aura is active.
+            chance_on_hit (float): Probability of applying a new stack of the
+                buff when the aura is active upon a successful normal hit,
+                between 0 and 1.
+            yellow_chance_on_hit (float): Same as above, but for special
                 abilities.
+            aura_duration (float): Duration of the trinket aura as well as any
+                buff stacks that are accumulated when the aura is active.
+            cooldown (float): Internal cooldown before the aura can be applied
+                again once it falls off.
+            aura_type (str): Either "activated" or "proc", specifying whether
+                the overall stack accumulation aura is applied via player
+                activation of the trinket or via another proc mechanic.
+            aura_proc_rates (dict): Dictionary containing "white" and "yellow"
+                keys specifying the chance on hit for activating the aura and
+                enabling subsequent stack accumulation. Required and used only
+                when aura_type is "proc".
         """
+        self.stack_increment = stat_increment
+        self.max_stacks = max_stacks
+        self.aura_name = aura_name
+        self.stack_name = stack_name
+        self.stack_proc_rates = {
+            'white': chance_on_hit, 'yellow': yellow_chance_on_hit
+        }
+        self.activated_aura = (aura_type == 'activated')
+        self.aura_proc_rates = aura_proc_rates
         ProcTrinket.__init__(
-            self, stat_name='armor_pen', stat_increment=0,
-            proc_name='Badge of the Swarmguard', proc_duration=30,
-            cooldown=180., chance_on_hit=white_chance_on_hit,
-            yellow_chance_on_hit=yellow_chance_on_hit
+            self, stat_name=stat_name, stat_increment=0, proc_name=aura_name,
+            proc_duration=aura_duration, cooldown=cooldown,
+            chance_on_hit=self.stack_proc_rates['white'],
+            yellow_chance_on_hit=self.stack_proc_rates['yellow']
         )
 
     def reset(self):
@@ -468,7 +505,10 @@ class BadgeOfTheSwarmguard(ProcTrinket):
         self.can_proc = False
         self.proc_happened = False
         self.num_stacks = 0
-        self.proc_name = 'Badge of the Swarmguard'
+        self.proc_name = self.aura_name
+
+        if not self.activated_aura:
+            self.rates = self.aura_proc_rates
 
     def deactivate(self, player, sim, time=None):
         """Deactivate the trinket buff when the duration has expired.
@@ -481,9 +521,9 @@ class BadgeOfTheSwarmguard(ProcTrinket):
             time (float): Time at which the trinket is deactivated. Defaults to
                 the stored time for automatic deactivation.
         """
-        # Temporarily change the stat increment to the total ArP gained while
+        # Temporarily change the stat increment to the total value gained while
         # the trinket was active
-        self.stat_increment = 200 * self.num_stacks
+        self.stat_increment = self.stack_increment * self.num_stacks
 
         # Reset trinket to inactive state
         self._reset()
@@ -495,11 +535,12 @@ class BadgeOfTheSwarmguard(ProcTrinket):
         a new stack is applied to an existing activation."""
         # If can_proc is True but the stat increment is 0, it means that the
         # last event was a trinket deactivation, so we activate the trinket.
-        if (not self.active) and self.can_proc and (self.stat_increment == 0):
+        if (self.activated_aura and (not self.active) and self.can_proc
+                and (self.stat_increment == 0)):
             return True
 
-        # Ignore procs when at 6 stacks, and prevent future proc checks
-        if self.num_stacks == 6:
+        # Ignore procs when at max stacks, and prevent future proc checks
+        if self.num_stacks == self.max_stacks:
             self.can_proc = False
             return False
 
@@ -507,7 +548,7 @@ class BadgeOfTheSwarmguard(ProcTrinket):
 
     def activate(self, time, player, sim):
         """Activate the trinket when off cooldown. If already active and a
-        trinket proc just occurred, then add a new stack of armor pen.
+        trinket proc just occurred, then add a new stack of the buff.
 
         Arguments:
             time (float): Simulation time, in seconds, of activation.
@@ -520,108 +561,11 @@ class BadgeOfTheSwarmguard(ProcTrinket):
             # Activate the trinket on a fresh use
             Trinket.activate(self, time, player, sim)
             self.can_proc = True
-            self.proc_name = 'Insight of the Qiraji'
-            self.stat_increment = 200
+            self.proc_name = self.stack_name
+            self.stat_increment = self.stack_increment
+            self.rates = self.stack_proc_rates
         else:
-            # Apply a new ArP stack. We do this "manually" rather than in the
-            # parent method because a new stack doesn't count as an actual
-            # activation.
-            self.modify_stat(time, player, sim, self.stat_increment)
-            self.num_stacks += 1
-
-            # Log if requested
-            if sim.log:
-                sim.combat_log.append(
-                    sim.gen_log(time, self.proc_name, 'applied')
-                )
-
-        return 0.0
-
-class BlackenedNaaruSliver(ProcTrinket):
-    """Custom class to handle the unique behavior of stacking Sliver procs."""
-
-    def __init__(self):
-        """Initialize a Trinket object modeling Sliver.
-        """
-        ProcTrinket.__init__(
-            self, stat_name='attack_power', stat_increment=0,
-            proc_name='Battle Trance', proc_duration=20,
-            cooldown=45., chance_on_hit=0.1,
-            yellow_chance_on_hit=0.1
-        )
-
-    def reset(self):
-        """Full reset of the trinket at the start of a fight."""
-        self.activation_time = -np.inf
-        self._reset()
-        self.stat_increment = 0
-        self.num_procs = 0
-        self.uptime = 0.0
-        self.last_update = 0.0
-
-    def _reset(self):
-        self.active = False
-        self.can_proc = False
-        self.proc_happened = False
-        self.num_stacks = 0
-        self.proc_name = 'Battle Trance'
-        self.rates = {
-            'white': 0.1, 'yellow': 0.1
-        }
-
-    def deactivate(self, player, sim, time=None):
-        """Deactivate the trinket buff when the duration has expired.
-
-        Arguments:
-            player (tbc_cat_sim.Player): Player object whose attributes will be
-                restored to their original values.
-            sim (tbc_cat_sim.Simulation): Simulation object controlling the
-                fight execution.
-            time (float): Time at which the trinket is deactivated. Defaults to
-                the stored time for automatic deactivation.
-        """
-        # Temporarily change the stat increment to the total AP gained while
-        # the trinket was active
-        self.stat_increment = 44 * self.num_stacks
-
-        # Reset trinket to inactive state
-        self._reset()
-        Trinket.deactivate(self, player, sim, time=time)
-        self.stat_increment = 0
-
-    def apply_proc(self):
-        """Determine whether a new trinket activation takes place, or whether
-        a new stack is applied to an existing activation."""
-        # Ignore procs when at 10 stacks, and prevent future proc checks
-        if self.num_stacks == 10:
-            self.can_proc = False
-            return False
-
-        return ProcTrinket.apply_proc(self)
-
-    def activate(self, time, player, sim):
-        """Activate the trinket when off cooldown. If already active and a
-        trinket proc just occurred, then add a new stack of attack power.
-
-        Arguments:
-            time (float): Simulation time, in seconds, of activation.
-            player (tbc_cat_sim.Player): Player object whose attributes will be
-                modified by the trinket proc.
-            sim (tbc_cat_sim.Simulation): Simulation object controlling the
-                fight execution.
-        """
-        if not self.active:
-            # Activate the trinket on a fresh use
-            Trinket.activate(self, time, player, sim)
-            self.can_proc = True
-            self.proc_name = 'Combat Insight'
-            self.stat_increment = 44
-            # change proc rate to 100% for the duration of the buff
-            self.rates = {
-                'white': 1.0, 'yellow': 1.0,
-            }
-        else:
-            # Apply a new battle trance stack. We do this "manually" rather than in the
+            # Apply a new buff stack. We do this "manually" rather than in the
             # parent method because a new stack doesn't count as an actual
             # activation.
             self.modify_stat(time, player, sim, self.stat_increment)
@@ -906,12 +850,18 @@ trinket_library = {
         },
     },
     'swarmguard': {
-        'type': 'proc',
+        'type': 'stacking_proc',
         'passive_stats': {},
         'active_stats': {
             'stat_name': 'armor_pen',
+            'stat_increment': 200,
+            'max_stacks': 6,
+            'aura_name': 'Badge of the Swarmguard',
+            'stack_name': 'Insight of the Qiraji',
             'proc_type': 'ppm',
             'proc_rate': 10.,
+            'aura_duration': 30,
+            'cooldown': 180,
         },
     },
     'vial': {
@@ -1020,20 +970,23 @@ trinket_library = {
         },
     },
     'bns': {
-        'type': 'proc',
+        'type': 'stacking_proc',
         'passive_stats': {
             'haste_rating': 54,
         },
-        # none of the following values are actually used, they're hardcoded in the bns subclass
-        # they are just included here for, idk, edification
         'active_stats': {
             'stat_name': 'attack_power',
             'stat_increment': 44,
-            'proc_name': 'Battle Trance',
-            'proc_duration': 20,
+            'max_stacks': 10,
+            'aura_name': 'Battle Trance',
+            'stack_name': 'Combat Insight',
+            'proc_type': 'custom',
+            'chance_on_hit': 1.0,
+            'yellow_chance_on_hit': 1.0,
+            'aura_duration': 20,
             'cooldown': 45,
-            'proc_type': 'chance_on_hit',
-            'proc_rate': 0.1,
+            'aura_type': 'proc',
+            'aura_proc_rates': {'white': 0.1, 'yellow': 0.1},
         },
     },
 }

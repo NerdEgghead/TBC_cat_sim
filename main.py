@@ -1105,20 +1105,15 @@ def process_trinkets(trinket_1, trinket_2, player, ap_mod, stat_mod, cd_delay):
                     ppm/60. * player.weapon_speed
                 )
 
-            if trinket == 'swarmguard':
-                trinket_obj = trinkets.BadgeOfTheSwarmguard(
-                    active_stats['chance_on_hit'],
-                    active_stats['yellow_chance_on_hit']
-                )
-            elif trinket == 'vial':
+            if trinket == 'vial':
                 trinket_obj = trinkets.PoisonVial(
                     active_stats['chance_on_hit'],
                     active_stats['yellow_chance_on_hit']
                 )
-            elif trinket == 'bns':
-                trinket_obj = trinkets.BlackenedNaaruSliver()
             elif trinket_params['type'] == 'refreshing_proc':
                 trinket_obj = trinkets.RefreshingProcTrinket(**active_stats)
+            elif trinket_params['type'] == 'stacking_proc':
+                trinket_obj = trinkets.StackingProcTrinket(**active_stats)
             else:
                 trinket_obj = trinkets.ProcTrinket(**active_stats)
 
