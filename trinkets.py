@@ -989,4 +989,20 @@ trinket_library = {
             'aura_proc_rates': {'white': 0.1, 'yellow': 0.1},
         },
     },
+    'crusade': {
+        'type': 'stacking_proc',
+        'passive_stats': {},
+        'active_stats': {
+            'stat_name': 'attack_power',
+            'stat_increment': 6,
+            'max_stacks': 20,
+            'aura_name': 'Aura of the Crusade',
+            'stack_name': 'Aura of the Crusader',
+            'proc_type': 'custom',
+            'chance_on_hit': 1.0,
+            'yellow_chance_on_hit': 1.0,
+            'aura_duration': 1e9,
+            'cooldown': 1e9,
+        },
+    },
 }

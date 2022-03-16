@@ -616,6 +616,7 @@ iteration_input = dbc.Col([
                     'value': 'assassin_alch'
                 },
                 {'label': 'Blackened Naaru Sliver', 'value': 'bns'},
+                {'label': 'Darkmoon Card: Crusade', 'value': 'crusade'},
             ],
             value='brooch'
         )),
@@ -658,6 +659,7 @@ iteration_input = dbc.Col([
                     'value': 'assassin_alch'
                 },
                 {'label': 'Blackened Naaru Sliver', 'value': 'bns'},
+                {'label': 'Darkmoon Card: Crusade', 'value': 'crusade'},
             ],
             value='tsunami'
         )),
