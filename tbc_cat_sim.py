@@ -1319,8 +1319,11 @@ class Simulation():
             # Decision tree for Bite usage is more complicated, so there is
             # some duplicated logic with the main tree.
 
-            # Shred versus Bite decision is the same as vanilla criteria
-            if (energy >= 57) or ((energy >= 15) and self.player.omen_proc):
+            # Shred versus Bite decision is the same as vanilla criteria.
+
+            # Bite immediately if we'd have to wait for the following cast.
+            cutoff_modifier = 0 if time_to_next_tick <= 1.0 else 20
+            if (energy >= 57 + cutoff_modifier) or ((energy >= 15 + cutoff_modifier) and self.player.omen_proc):
                 return self.player.shred()
             if energy >= 35:
                 return self.player.bite()
