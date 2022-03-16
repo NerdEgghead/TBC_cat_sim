@@ -401,10 +401,10 @@ class Player():
         # incorrect according to the DB.
         ap, bm = self.attack_power, self.bite_multiplier
         self.bite_low = {
-            i: (169*i + 57 + 0.05 * i * ap) * bm for i in range(1,6)
+            i: (169*i + 57 + 0.05 * i * ap) * bm for i in range(1, 6)
         }
         self.bite_high = {
-            i: (169*i + 123 + 0.05 * i * ap) * bm for i in range(1,6)
+            i: (169*i + 123 + 0.05 * i * ap) * bm for i in range(1, 6)
         }
         mangle_fac = 1 + 0.1 * self.savage_fury
         self.claw_low = mangle_fac * (self.white_low + 190 * self.multiplier)
@@ -459,6 +459,7 @@ class Player():
         self.five_second_rule = False
         self.cat_form = True
         self.t4_proc = False
+        self.ready_to_shift = False
 
         # Create dictionary to hold breakdown of total casts and damage
         self.dmg_breakdown = collections.OrderedDict()
@@ -1006,8 +1007,8 @@ class Simulation():
     }
 
     def __init__(
-        self, player, fight_length, num_mcp=0, trinkets=[], haste_pot=None,
-        **kwargs
+        self, player, fight_length, latency, num_mcp=0, trinkets=[],
+        haste_pot=None, **kwargs
     ):
         """Initialize simulation.
 
@@ -1015,6 +1016,10 @@ class Simulation():
             player (Player): An instantiated Player object which can execute
                 the DPS rotation.
             fight_length (float): Fight length in seconds.
+            latency (float): Modeled player input delay in seconds. Used to
+                simulate realistic delays between energy gains and subsequent
+                special ability casts, as well as delays in powershift timing
+                relative to the GCD.
             num_mcp (int): Maximum number of MCPs that can be used during the
                 fight. If nonzero, the Player object should be instantiated
                 with a hasted swing timer, and the simulation will slow it down
@@ -1032,6 +1037,7 @@ class Simulation():
         """
         self.player = player
         self.fight_length = fight_length
+        self.latency = latency
         self.max_mcp = int(round(num_mcp))
         self.trinkets = trinkets
         self.params = copy.deepcopy(self.default_params)
@@ -1125,6 +1131,16 @@ class Simulation():
         Arguments:
             time (float): Current simulation time in seconds.
         """
+        self.waiting_for_tick = False
+
+        # If we have just now decided to shift, then we do not execute the
+        # shift immediately, but instead trigger an input delay for realism.
+        if not self.player.ready_to_shift:
+            self.player.ready_to_shift = True
+            return
+
+        self.player.ready_to_shift = False
+
         # Only Innervate if (a) we don't have enough mana for two shifts, (b)
         # the fight isn't ending, and (c) Innervate is not on cooldown.
         if (self.strategy['use_innervate']
@@ -1210,6 +1226,8 @@ class Simulation():
             self.rip_ticks = list(np.arange(time + 2, time + 12.01, 2))
             self.rip_damage = damage_per_tick
 
+        self.waiting_for_tick = False
+
     def execute_rotation(self, time, next_tick):
         """Execute the next player action in the DPS rotation according to the
         specified player strategy in the simulation.
@@ -1224,6 +1242,12 @@ class Simulation():
         # If we're out of form because we just cast Innervate, always shift
         if not self.player.cat_form:
             self.player.shift(time)
+            return 0.0
+
+        # If we previously decided to shift, then execute the shift now once
+        # the input delay is over.
+        if self.player.ready_to_shift:
+            self.innervate_or_shift(time)
             return 0.0
 
         energy, cp = self.player.energy, self.player.combo_points
@@ -1292,6 +1316,7 @@ class Simulation():
             self.strategy['bite_over_rip'] or (not mangle_now)
         )
         time_to_next_tick = next_tick - time
+        self.waiting_for_tick = True
 
         if self.player.mana < self.player.shift_cost:
             # If this is the first time we're oom, log it
@@ -1393,6 +1418,16 @@ class Simulation():
             self.innervate_or_shift(time)
         elif time_to_next_tick > self.strategy['max_wait_time']:
             self.innervate_or_shift(time)
+
+        # Model two types of input latency: (1) When waiting for an energy tick
+        # to execute the next special ability, the special will in practice be
+        # slightly delayed after the tick arrives. (2) When executing a
+        # powershift without clipping the GCD, the shift will in practice be
+        # slightly delayed after the GCD ends.
+        if self.waiting_for_tick:
+            self.player.gcd = time_to_next_tick + self.latency
+        if self.player.ready_to_shift:
+            self.player.gcd = self.latency
 
         return 0.0
 
@@ -1498,11 +1533,11 @@ class Simulation():
 
         # Fight begins at a random time relative to energy tick. Since we start
         # at 100 energy, let's random roll the time of the next tick.
-        energy_tick_start = 2.0 * np.random.rand()
+        energy_tick_start = 2.02 * np.random.rand()
 
         # Create array of energy tick times
         energy_tick_times = list(np.arange(
-            energy_tick_start, self.fight_length + 2, 2
+            energy_tick_start, self.fight_length + 2.02, 2.02
         ))
 
         # Same thing for swing times, except that the first swing will occur at
@@ -1519,9 +1554,9 @@ class Simulation():
         if self.strategy['prepop_TF']:
             tf_end = (
                 energy_tick_start - 0.1 + 6
-                - 2 * self.strategy['prepop_numticks']
+                - 2.02 * self.strategy['prepop_numticks']
             )
-            self.player.energy -= 10 * (2 - self.strategy['prepop_numticks'])
+            self.player.energy -= 9.8 * (2 - self.strategy['prepop_numticks'])
             self.params['tigers_fury'] = True
             self.player.calc_damage_params(**self.params)
         else:
@@ -1693,7 +1728,7 @@ class Simulation():
             # Check if an energy/spirit tick happens at this time
             if time == energy_tick_times[0]:
                 self.player.energy = (
-                    min(100, self.player.energy + 20) * self.player.cat_form
+                    min(100, self.player.energy + 20.2) * self.player.cat_form
                 )
                 self.player.regen_mana()
                 energy_tick_times.pop(0)

@@ -297,17 +297,22 @@ encounter_details = dbc.Col(
 # Sim replicates input
 iteration_input = dbc.Col([
     html.H4('Sim Settings'),
-    html.Div(
-        'Number of replicates:',
-        style={
-            'width': '35%', 'display': 'inline-block', 'fontWeight': 'bold'
-        }
+    dbc.InputGroup(
+        [
+            dbc.InputGroupAddon('Number of replicates:', addon_type='prepend'),
+            dbc.Input(value=20000, type='number', id='num_replicates')
+        ],
+        style={'width': '35%'}
     ),
-    dbc.Input(
-        type='number', value=20000, id='num_replicates',
-        style={
-            'width': '20%', 'display': 'inline-block', 'marginBottom': '2.5%'
-        }
+    dbc.InputGroup(
+        [
+            dbc.InputGroupAddon('Modeled input delay:', addon_type='prepend'),
+            dbc.Input(
+                value=100, type='number', id='latency', min=1, step=1,
+            ),
+            dbc.InputGroupAddon('ms', addon_type='append')
+        ],
+        style={'width': '35%'}
     ),
     html.Br(),
     html.H5('Talents'),
@@ -1510,6 +1515,7 @@ def plot_new_trajectory(sim, show_whites):
     State('ripweave_energy', 'value'),
     State('bear_mangle', 'value'),
     State('num_replicates', 'value'),
+    State('latency', 'value'),
     State('calc_mana_weights', 'checked'),
     State('epic_gems', 'checked'),
     State('show_whites', 'checked'))
@@ -1523,7 +1529,7 @@ def compute(
         cd_delay, prepop_TF, prepop_numticks, use_mangle_trick, use_rake_trick,
         use_bite_trick, bite_trick_cp, bite_trick_max, use_innervate,
         use_biteweave, bite_time, use_ripweave, ripweave_energy, bear_mangle,
-        num_replicates, calc_mana_weights, epic_gems, show_whites
+        num_replicates, latency, calc_mana_weights, epic_gems, show_whites
 ):
     ctx = dash.callback_context
 
@@ -1706,7 +1712,7 @@ def compute(
         haste_pot = None
 
     sim = ccs.Simulation(
-        player, fight_length + 1e-9, num_mcp=max_mcp,
+        player, fight_length + 1e-9, 0.001 * latency, num_mcp=max_mcp,
         boss_armor=boss_armor, prepop_TF=bool(prepop_TF),
         prepop_numticks=int(prepop_numticks), min_combos_for_rip=rip_combos,
         min_combos_for_bite=int(bite_cp), use_innervate=bool(use_innervate),
