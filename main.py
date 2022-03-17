@@ -24,32 +24,32 @@ app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
 server = app.server
 
 default_input_stats = {
-    "agility": 576,
-    "armor": 5058,
-    "attackPower": 3404,
-    "crit": 41.34,
-    "critRating": 140,
-    "critReduction": 3,
-    "defense": 350,
-    "dodge": 42.3,
-    "expertise": 6,
-    "expertiseRating": 25,
-    "feralAttackPower": 1110,
-    "health": 8754,
-    "hit": 5.45,
-    "hitRating": 86,
-    "intellect": 242,
-    "mainHandSpeed": 2,
-    "mana": 5720,
-    "natureResist": 10,
-    "parry": 5,
-    "resilience": 1.32,
-    "resilienceRating": 52,
-    "spellCrit": 4.88,
-    "spirit": 161,
-    "stamina": 532,
-    "strength": 398,
-    "weaponDamage": 5
+        "agility": 656,
+        "armor": 5218,
+        "armorPen": 441,
+        "attackPower": 3304,
+        "crit": 42.14,
+        "critRating": 87,
+        "critReduction": 3,
+        "defense": 350,
+        "dodge": 47.74,
+        "expertise": 6,
+        "expertiseRating": 25,
+        "feralAttackPower": 973,
+        "health": 8854,
+        "hit": 4.06,
+        "hitRating": 64,
+        "intellect": 242,
+        "mainHandSpeed": 3,
+        "mana": 5720,
+        "natureResist": 10,
+        "parry": 5,
+        "resilience": 0.48,
+        "resilienceRating": 19,
+        "spellCrit": 4.88,
+        "spirit": 161,
+        "stamina": 542,
+        "strength": 314
 }
 
 stat_input = dbc.Col([
@@ -171,7 +171,7 @@ buffs_1 = dbc.Col(
              {'label': 'Mana Spring Totem', 'value': 'mana_spring_totem'},
              {'label': 'Braided Eternium Chain', 'value': 'be_chain'},
          ],
-         value=['omen', 'mana_spring_totem'], id='other_buffs'
+         value=['omen', 'sanc_aura', 'mana_spring_totem'], id='other_buffs'
      ),
      dbc.InputGroup(
          [
@@ -194,7 +194,7 @@ encounter_details = dbc.Col(
          [
              dbc.InputGroupAddon('Fight Length:', addon_type='prepend'),
              dbc.Input(
-                 value=180.0, type='number', id='fight_length',
+                 value=120.0, type='number', id='fight_length',
              ),
              dbc.InputGroupAddon('seconds', addon_type='append')
          ],
@@ -203,7 +203,7 @@ encounter_details = dbc.Col(
      dbc.InputGroup(
          [
              dbc.InputGroupAddon('Boss Armor:', addon_type='prepend'),
-             dbc.Input(value=7700, type='number', id='boss_armor')
+             dbc.Input(value=6193, type='number', id='boss_armor')
          ],
          style={'width': '50%'}
      ),
@@ -283,7 +283,7 @@ encounter_details = dbc.Col(
                      {'label': 'Haste Potion', 'value': 'haste'},
                      {'label': 'None', 'value': 'none'},
                  ],
-                 value='super', id='potion',
+                 value='haste', id='potion',
              ),
          ],
          style={'width': '50%', 'marginTop': '1.5%'}
@@ -623,7 +623,7 @@ iteration_input = dbc.Col([
                 {'label': 'Blackened Naaru Sliver', 'value': 'bns'},
                 {'label': 'Darkmoon Card: Crusade', 'value': 'crusade'},
             ],
-            value='brooch'
+            value='madness'
         )),
         dbc.Col(dbc.Select(
             id='trinket_2',
