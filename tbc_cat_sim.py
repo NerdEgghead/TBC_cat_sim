@@ -1347,8 +1347,9 @@ class Simulation():
             # Shred versus Bite decision is the same as vanilla criteria.
 
             # Bite immediately if we'd have to wait for the following cast.
-            cutoff_modifier = 0 if time_to_next_tick <= 1.0 else 20
-            if (energy >= 57 + cutoff_modifier) or ((energy >= 15 + cutoff_modifier) and self.player.omen_proc):
+            cutoff_mod = 0 if time_to_next_tick <= 1.0 else 20
+            if ((energy >= 57 + cutoff_mod) or
+                    ((energy >= 15 + cutoff_mod) and self.player.omen_proc)):
                 return self.player.shred()
             if energy >= 35:
                 return self.player.bite()
@@ -1378,12 +1379,14 @@ class Simulation():
             if wait and (time_to_next_tick > self.strategy['max_wait_time']):
                 self.innervate_or_shift(time)
         elif (energy >= 35 and energy <= self.strategy['bite_trick_max']
-              and self.strategy['use_bite_trick'] and time_to_next_tick > 1
+              and self.strategy['use_bite_trick']
+              and (time_to_next_tick > 1 + self.latency)
               and not self.player.omen_proc
               and cp >= self.strategy['bite_trick_cp']):
             return self.player.bite()
         elif (energy >= 35 and energy < mangle_cost
-              and self.strategy['use_rake_trick'] and time_to_next_tick > 1
+              and self.strategy['use_rake_trick']
+              and (time_to_next_tick > 1 + self.latency)
               and not self.rake_debuff
               and not self.player.omen_proc):
             return self.rake(time)
@@ -1412,7 +1415,8 @@ class Simulation():
                 return self.mangle(time)
             if energy >= 42:
                 return self.player.shred()
-            if (energy >= mangle_cost) and (time_to_next_tick > 1.0):
+            if ((energy >= mangle_cost)
+                    and (time_to_next_tick > 1.0 + self.latency)):
                 return self.mangle(time)
             if time_to_next_tick > self.strategy['max_wait_time']:
                 self.innervate_or_shift(time)
