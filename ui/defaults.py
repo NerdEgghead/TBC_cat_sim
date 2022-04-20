@@ -1,0 +1,30 @@
+
+default_input_stats = {
+    "agility": 656,
+    "armor": 5218,
+    "armorPen": 441,
+    "attackPower": 3304,
+    "crit": 42.14,
+    "critRating": 87,
+    "critReduction": 3,
+    "defense": 350,
+    "dodge": 47.74,
+    "expertise": 6,
+    "expertiseRating": 25,
+    "feralAttackPower": 973,
+    "health": 8854,
+    "hit": 4.06,
+    "hitRating": 64,
+    "intellect": 242,
+    "mainHandSpeed": 3,
+    "mana": 5720,
+    "natureResist": 10,
+    "parry": 5,
+    "resilience": 0.48,
+    "resilienceRating": 19,
+    "spellCrit": 4.88,
+    "spirit": 161,
+    "stamina": 542,
+    "strength": 314
+}
+
