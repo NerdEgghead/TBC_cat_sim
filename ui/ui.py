@@ -24,21 +24,27 @@ from ui.util import trinkets
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
 
 def uses_wolfshead(input_json):
+    if input_json is None:
+        return False
     for i in input_json['items']:
         if i['slot'] == "HEAD":
-            if "wolfshead" in i['name']:
+            if "Wolfshead" in i['name']:
                 return True
     return False
 
 class UI:
     df = None
+    bonuses = None
     def __init__(self):
         self.df = pd.DataFrame(columns=[
             "dps",
             "name",
             "trinket 1",
             "trinket 2",
+            "boss armor",
+            "fight length",
             "wolfshead",
+            "time to oom",
             "crit",
             "hit",
             "ap",
@@ -315,6 +321,7 @@ class UI:
         )
         shred_bonus = 88 * ('everbloom' in bonuses) + 75 * ('t5_bonus' in bonuses)
 
+
         # Create and return a corresponding Player object
         player = ccs.Player(
             attack_power=buffed_attack_power, hit_chance=encounter_hit / 100,
@@ -508,6 +515,11 @@ class UI:
             unleashed_rage = 'unleashed_rage' in raid_buffs
             kings = 'kings' in raid_buffs
 
+        if uses_wolfshead(input_json):
+            if 'wolfshead' not in bonuses:
+                print("added wolfshead to bonuses from json data")
+                bonuses.append("wolfshead")
+
         # Create Player object based on raid buffed stat inputs and talents
         player, ap_mod, stat_mod = self.create_player(
             input_stats['attackPower'], input_stats['hit'], input_stats['crit'],
@@ -612,7 +624,8 @@ class UI:
                 (ctx.triggered[0]['prop_id'] in
                  ['run_button.n_clicks', 'weight_button.n_clicks'])):
             avg_dps, dps_output = self.run_sim(sim, num_replicates)
-            self.generate_set_entry(input_json, avg_dps, trinket_1, trinket_2)
+            oom_time = dps_output[2]
+            self.generate_set_entry(input_json, avg_dps, trinket_1, trinket_2, boss_armor, fight_length, oom_time)
         else:
             dps_output = ('', '', '', [], [])
 
@@ -688,7 +701,7 @@ class UI:
             ripweave_text_style_1, ripweave_text_style_2
         )
 
-    def generate_set_entry(self, input_json, dps, trinket_1, trinket_2):
+    def generate_set_entry(self, input_json, dps, trinket_1, trinket_2, boss_armor, fight_length, oom_time):
         if trinket_1 == 'none':
             if input_json is not None:
                 for i in input_json['items']:
@@ -707,6 +720,9 @@ class UI:
             "wolfshead": uses_wolfshead(input_json),
             "trinket 1": trinkets.trinket_friendly_name(trinket_1),
             "trinket 2": trinkets.trinket_friendly_name(trinket_2),
+            "boss armor":  boss_armor,
+            "fight length": fight_length,
+            "time to oom": oom_time,
             "crit": stats['crit'],
             "hit": stats['hit'],
             "ap": stats["attackPower"],
@@ -734,7 +750,7 @@ class UI:
         else:
             dff = self.df
 
-        return dff.to_dict('records'), [{'name': i, 'id': i, 'deletable': True} for i in dff.columns]
+        return dff.to_dict('records'), [{'name': i, 'id': i} for i in dff.columns]
 
 
 
